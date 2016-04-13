@@ -15,7 +15,7 @@ class AbstractModel(object):
         and then computing the corresponding distance to the matched point in y.
         If the distance is less than epsilon, the match is considered good.
         """
-        X2 = self.apply_special(X)
+        X2 = self.apply(X)
         # dists_sqr = np.sum((y - X2) ** 2, axis=1)
         dists = np.sqrt(np.sum((y - X2) ** 2, axis=1))
         # print "dists", dists
@@ -34,9 +34,6 @@ class AbstractModel(object):
     def apply(self, p):
         raise RuntimeError, "Not implemented, but probably should be"
  
-    def apply_special(self, p):
-        raise RuntimeError, "Not implemented, but probably should be"
-
 
     def fit(self, X, y):
         raise RuntimeError, "Not implemented, but probably should be"
