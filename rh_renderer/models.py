@@ -41,6 +41,9 @@ class AbstractModel(object):
     def set_from_modelspec(self, s):
         raise RuntimeError, "Not implemented, but probably should be"
 
+    def to_modelspec(self):
+        raise RuntimeError, "Not implemented, but probably should be"
+
     def is_affine(self):
         return False
 
@@ -396,6 +399,12 @@ class PointsTransformModel(AbstractModel):
                       ).T
         self.point_map = (src, dest)
         self.interpolator = None
+
+    def to_modelspec(self):
+        return {
+                "className" : self.class_name,
+                "dataString" : "{}".format(' '.join(['{} {} {} {} 1.0'.format(float(p1[0]), float(p1[1]), float(p2[0]), float(p2[1])) for p1, p2 in zip(self.point_map[0], self.point_map[1])]))
+            }
 
     def get_point_map(self):
         return self.point_map
