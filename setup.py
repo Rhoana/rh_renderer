@@ -13,7 +13,6 @@ setup(
     name='rh_renderer',
     version=VERSION,
     packages=find_packages(),
-    package_data={'mbeam': ['web/*.*']},
     author='Adi Suissa-Peleg',
     author_email='adisuis@seas.harvard.edu',
     url="https://github.com/Rhoana/rh_renderer",
