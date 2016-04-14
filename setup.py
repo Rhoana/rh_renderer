@@ -1,11 +1,8 @@
 #!/usr/bin/env python
 import os
-
 from setuptools import setup, find_packages
 
-VERSION = 0.0.1
-version = os.path.join('rh_renderer', '__init__.py')
-execfile(version)
+VERSION = '0.0.1'
 
 README = open('README.md').read()
 
