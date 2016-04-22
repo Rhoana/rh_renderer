@@ -80,6 +80,8 @@ class TranslationModel(AbstractAffineModel):
         self.delta = np.array(delta)
 
     def apply(self, p):
+        if p.ndim == 1:
+            return p + self.delta
         return np.atleast_2d(p) + np.asarray(self.delta).reshape((-1, 2))
 
     def to_str(self):
@@ -133,6 +135,10 @@ class RigidModel(AbstractAffineModel):
         """
         Returns a new 2D point(s) after applying the transformation on the given point(s) p
         """
+        if p.ndim == 1:
+            return np.dot([[self.cos_val, -self.sin_val],
+                       [self.sin_val, self.cos_val]],
+                       p).T + np.asarray(self.delta).reshape((1, 2))
         pts = np.atleast_2d(p)
         return np.dot([[self.cos_val, -self.sin_val],
                        [self.sin_val, self.cos_val]],
@@ -217,6 +223,10 @@ class SimilarityModel(AbstractAffineModel):
         """
         Returns a new 2D point(s) after applying the transformation on the given point(s) p
         """
+        if p.ndim == 1:
+            return np.dot([[self.scos_val, -self.ssin_val],
+                       [self.ssin_val, self.scos_val]],
+                       p).T + np.asarray(self.delta).reshape((1, 2))
         pts = np.atleast_2d(p)
         return np.dot([[self.scos_val, -self.ssin_val],
                        [self.ssin_val, self.scos_val]],
@@ -305,6 +315,8 @@ class AffineModel(AbstractAffineModel):
         """
         Returns a new 2D point(s) after applying the transformation on the given point(s) p
         """
+        if p.ndim == 1:
+            return np.dot(self.m[:2,:2], p) + np.asarray(self.m.T[2][:2]).reshape((1, 2))
         pts = np.atleast_2d(p)
         return np.dot(self.m[:2,:2],
                        pts.T).T + np.asarray(self.m.T[2][:2]).reshape((1, 2))
@@ -385,6 +397,8 @@ class PointsTransformModel(AbstractModel):
         self.update_interpolator()
 
         pts = np.atleast_2d(p)
+        if p.ndim == 1:
+            return self.interpolator(pts)[0]
         return self.interpolator(pts)
 
     def set_from_modelspec(self, s):
