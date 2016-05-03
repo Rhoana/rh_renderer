@@ -65,6 +65,17 @@ class AbstractAffineModel(AbstractModel):
         return np.dot(m[:2,:2],
                        pts.T).T + np.asarray(m.T[2][:2]).reshape((1, 2))
 
+    def apply_inv(self, p):
+        """
+        Returns a new 2D point(s) after applying the inverse transformation on the given point(s) p
+        """
+        pts = np.atleast_2d(p)
+        m = self.get_matrix()
+        m_inv = np.linalg.inv(m)
+        return np.dot(m_inv[:2,:2],
+                       pts.T).T + np.asarray(m_inv.T[2][:2]).reshape((1, 2))
+
+
     def is_affine(self):
         return True
 
@@ -83,6 +94,11 @@ class TranslationModel(AbstractAffineModel):
         if p.ndim == 1:
             return p + self.delta
         return np.atleast_2d(p) + np.asarray(self.delta).reshape((-1, 2))
+
+    def apply_inv(self, p):
+        if p.ndim == 1:
+            return p - self.delta
+        return np.atleast_2d(p) - np.asarray(self.delta).reshape((-1, 2))
 
     def to_str(self):
         return "T={}".format(self.delta)
@@ -143,6 +159,24 @@ class RigidModel(AbstractAffineModel):
         return np.dot([[self.cos_val, -self.sin_val],
                        [self.sin_val, self.cos_val]],
                        pts.T).T + np.asarray(self.delta).reshape((1, 2))
+
+    def apply_inv(self, p):
+        """
+        Returns a new 2D point(s) after applying the inverse transformation on the given point(s) p
+        """
+        # The inverse matrix of the [2,2] rigid matrix is similar to the forward matrix (the angle is negative),
+        # the delta needs to be computed by R-1*delta
+        inv_delta = np.dot([[self.cos_val, self.sin_val],
+                       [-self.sin_val, self.cos_val]], self.delta).T
+        if p.ndim == 1:
+            return np.dot([[self.cos_val, self.sin_val],
+                       [-self.sin_val, self.cos_val]],
+                       p).T + inv_delta
+        pts = np.atleast_2d(p)
+        return np.dot([[self.cos_val, self.sin_val],
+                       [-self.sin_val, self.cos_val]],
+                       pts.T).T + inv_delta
+
 
     def to_str(self):
         return "R={}, T={}".format(np.arccos(self.cos_val), self.delta)
@@ -232,6 +266,24 @@ class SimilarityModel(AbstractAffineModel):
                        [self.ssin_val, self.scos_val]],
                        pts.T).T + np.asarray(self.delta).reshape((1, 2))
 
+    def apply_inv(self, p):
+        """
+        Returns a new 2D point(s) after applying the inverse transformation on the given point(s) p
+        """
+        # The inverse matrix of the [2,2] rigid matrix is similar to the forward matrix (the angle is negative),
+        # the delta needs to be computed by R-1*delta
+        inv_delta = np.dot([[self.scos_val, self.ssin_val],
+                       [-self.ssin_val, self.scos_val]], self.delta).T
+        if p.ndim == 1:
+            return np.dot([[self.scos_val, self.ssin_val],
+                       [-self.ssin_val, self.scos_val]],
+                       p).T + inv_delta
+        pts = np.atleast_2d(p)
+        return np.dot([[self.scos_val, self.ssin_val],
+                       [-self.ssin_val, self.scos_val]],
+                       pts.T).T + inv_delta
+
+
     def to_str(self):
         return "S={}, T={}".format(np.arccos(self.scos_val), self.delta)
 
@@ -320,6 +372,20 @@ class AffineModel(AbstractAffineModel):
         pts = np.atleast_2d(p)
         return np.dot(self.m[:2,:2],
                        pts.T).T + np.asarray(self.m.T[2][:2]).reshape((1, 2))
+
+    def apply_inv(self, p):
+        """
+        Returns a new 2D point(s) after applying the inverse transformation on the given point(s) p
+        """
+        # The inverse matrix of the [2,2] rigid matrix is similar to the forward matrix (the angle is negative),
+        # the delta needs to be computed by R-1*delta
+        m_inv = np.linalg.inv(self.m)
+        if p.ndim == 1:
+            return np.dot(self.m_inv[:2,:2], p) + np.asarray(self.m_inv.T[2][:2]).reshape((1, 2))
+        pts = np.atleast_2d(p)
+        return np.dot(self.m_inv[:2,:2],
+                       pts.T).T + np.asarray(self.m_inv.T[2][:2]).reshape((1, 2))
+
 
     def to_str(self):
         return "M={}".format(self.m)
