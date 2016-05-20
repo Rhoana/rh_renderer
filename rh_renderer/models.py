@@ -195,7 +195,7 @@ class RigidModel(AbstractAffineModel):
         self.delta = np.array([float(d) for d in splitted[1:]])
 
     def get_matrix(self):
-        return np.vstack([
+        return np.array([
             [self.cos_val, -self.sin_val, self.delta[0]],
             [self.sin_val, self.cos_val, self.delta[1]],
             [0, 0, 1]
@@ -301,11 +301,11 @@ class SimilarityModel(AbstractAffineModel):
         self.delta = np.array([float(d) for d in splitted[1:]])
 
     def get_matrix(self):
-        return np.vstack(
+        return np.array([
             np.array([self.scos_val, -self.ssin_val, self.delta[0]]),
             np.array([self.ssin_val, self.scos_val, self.delta[1]]),
             np.array([0, 0, 1])
-            )
+            ])
 
     def fit(self, X, y):
         """
