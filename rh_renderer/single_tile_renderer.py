@@ -10,10 +10,11 @@ import scipy.interpolate as spint
 import scipy.spatial.qhull as qhull
 from scipy.spatial import ConvexHull
 
-class SingleTileRenderer:
+class SingleTileRendererBase(object):
 
-    def __init__(self, img_path, width, height, compute_mask=False, compute_distances=True):
-        self.img_path = img_path
+    def __init__(self, width, height, 
+                 compute_mask=False, 
+                 compute_distances=True):
         self.width = width
         self.height = height
         # Starting with a single identity affine transformation
@@ -117,12 +118,15 @@ class SingleTileRenderer:
 #            return True
 #        return False
 
+    def load(self):
+        raise NotImplementedError("Please implement load in a derived class")
+    
     def render(self):
         """Returns the rendered image (after transformation), and the start point of the image in global coordinates"""
         if self.already_rendered:
             return self.img, self.start_point
 
-        img = cv2.imread(self.img_path, 0)
+        img = self.load()
         self.start_point = np.array([self.bbox[0], self.bbox[2]]) # may be different for non-affine result
 
         if self.non_affine_transform is None:
@@ -270,7 +274,18 @@ class SingleTileRenderer:
         # Take only the parts that are overlapping
         return cropped_img, (overlapping_area[0], overlapping_area[2]), cropped_distances
 
-
+class SingleTileRenderer(SingleTileRendererBase):
+    '''Implementation of SingleTileRendererBase with file path'''
+    
+    def __init__(self, img_path, width, height, 
+                 compute_mask=False, 
+                 compute_distances=True):
+        super(SingleTileRenderer, self).__init__(
+            width, height, compute_mask, compute_distances)
+        self.img_path = img_path
+        
+    def load(self):
+        return cv2.imread(self.img_path, 0)
 
     # Helper methods (shouldn't be used from the outside)
 
