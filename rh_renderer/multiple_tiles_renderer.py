@@ -1,4 +1,4 @@
-from single_tile_renderer import SingleTileRenderer
+from single_tile_renderer import SingleTileRenderer, AlphaTileRenderer
 import numpy as np
 
 
@@ -49,24 +49,29 @@ class MultipleTilesRenderer:
 
         elif self.blend_type == 1: # Averaging
             # Do the calculation on a uint16 image (for overlapping areas), and convert to uint8 at the end
-            res = np.zeros((round(to_y + 1 - from_y), round(to_x + 1 - from_x)), dtype=np.uint16)
-            res_mask = np.zeros((round(to_y + 1 - from_y), round(to_x + 1 - from_x)), dtype=np.uint8)
+            res = np.zeros(
+                (round(to_y + 1 - from_y), round(to_x + 1 - from_x)), 
+                np.float32)
+            res_mask = np.zeros(
+                (round(to_y + 1 - from_y), round(to_x + 1 - from_x)),
+                np.float32)
 
             # render only relevant parts, and stitch them together
             # TODO - filter only relevant tiles using kdtree or something similar
             for t in self.single_tiles:
                 t_img, t_start_point, t_mask = t.crop(from_x, from_y, to_x, to_y)
                 if t_img is not None:
+                    t_mask, _, _ = AlphaTileRenderer(t).crop(
+                        from_x, from_y, to_x, to_y)
                     res[t_start_point[1] - from_y: t_img.shape[0] + (t_start_point[1] - from_y),
                         t_start_point[0] - from_x: t_img.shape[1] + (t_start_point[0] - from_x)] += t_img
-                        #t_start_point[0] - from_x: t_img.shape[1] + t_start_point[0] - from_x] += t_mask * 50
                     res_mask[t_start_point[1] - from_y: t_img.shape[0] + (t_start_point[1] - from_y),
                              t_start_point[0] - from_x: t_img.shape[1] + (t_start_point[0] - from_x)] += t_mask
 
             # Change the values of 0 in the mask to 1, to avoid division by 0
             res_mask[res_mask == 0] = 1
             res = res / res_mask
-            res = res.astype(np.uint8)
+            res = np.maximum(0, np.minimum(255, res)).astype(np.uint8)
 
         elif self.blend_type == 2: # Linear averaging
             # Do the calculation on a uint32 image (for overlapping areas), and convert to uint8 at the end
@@ -89,7 +94,7 @@ class MultipleTilesRenderer:
             # Change the weights that are 0 to 1, to avoid division by 0
             res_weights[res_weights < 1] = 1
             res = res / res_weights
-            res = res.astype(np.uint8)
+            res = np.maximum(0, np.minimum(255, res)).astype(np.uint8)
 
         return res, (from_x, from_y)
 

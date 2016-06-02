@@ -6,6 +6,7 @@
 import cv2
 import numpy as np
 import math
+from rh_renderer.models import AffineModel
 import scipy.interpolate as spint
 import scipy.spatial.qhull as qhull
 from scipy.spatial import ConvexHull
@@ -146,7 +147,7 @@ class SingleTileRendererBase(object):
                 weights_img = np.minimum(
                                     np.minimum(grid[0], self.height - 1 - grid[0]),
                                     np.minimum(grid[1], self.width - 1 - grid[1])
-                                ).astype(np.float32)
+                                ).astype(np.float32) + .5
                 self.weights = cv2.warpAffine(weights_img, adjusted_transform, self.shape, flags=cv2.INTER_AREA)
 
         else:
@@ -192,7 +193,7 @@ class SingleTileRendererBase(object):
                 weights_img = np.minimum(
                                     np.minimum(grid[0], self.height - 1 - grid[0]),
                                     np.minimum(grid[1], self.width - 1 - grid[1])
-                                ).astype(np.float32)
+                                ).astype(np.float32) + .5
                 self.weights = cv2.remap(weights_img, map_x, map_y, cv2.INTER_CUBIC).T
                 self.weights[self.weights < 0] = 0
 
@@ -286,6 +287,31 @@ class SingleTileRenderer(SingleTileRendererBase):
         
     def load(self):
         return cv2.imread(self.img_path, 0)
+
+class AlphaTileRenderer(SingleTileRendererBase):
+    '''An alpha channel for a pre-existing single tile'''
+    
+    def __init__(self, other_renderer):
+        '''Initialize with another renderer
+        
+        :param other_renderer: A renderer derived from SingleTileRendererBase
+        '''
+        super(AlphaTileRenderer, self).__init__(
+            other_renderer.width, other_renderer.height, False, False)
+        pre, post = [
+            AffineModel(np.vstack([transform, [0, 0, 1]])
+                        if transform.shape[0] == 2
+                        else transform) 
+            for transform in 
+            other_renderer.pre_non_affine_transform, 
+            other_renderer.post_non_affine_transform]
+        self.add_transformation(pre)             
+        if other_renderer.non_affine_transform is not None:
+            self.add_transformation(other_renderer.non_affine_transform)
+            self.add_transformation(post)
+    
+    def load(self):
+        return np.ones((self.height, self.width), np.float32)
 
     # Helper methods (shouldn't be used from the outside)
 
