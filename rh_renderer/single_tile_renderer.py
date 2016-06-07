@@ -6,14 +6,16 @@
 import cv2
 import numpy as np
 import math
+from rh_renderer.models import AffineModel
 import scipy.interpolate as spint
 import scipy.spatial.qhull as qhull
 from scipy.spatial import ConvexHull
 
-class SingleTileRenderer:
+class SingleTileRendererBase(object):
 
-    def __init__(self, img_path, width, height, compute_mask=False, compute_distances=True):
-        self.img_path = img_path
+    def __init__(self, width, height, 
+                 compute_mask=False, 
+                 compute_distances=True):
         self.width = width
         self.height = height
         # Starting with a single identity affine transformation
@@ -117,12 +119,15 @@ class SingleTileRenderer:
 #            return True
 #        return False
 
+    def load(self):
+        raise NotImplementedError("Please implement load in a derived class")
+    
     def render(self):
         """Returns the rendered image (after transformation), and the start point of the image in global coordinates"""
         if self.already_rendered:
             return self.img, self.start_point
 
-        img = cv2.imread(self.img_path, 0)
+        img = self.load()
         self.start_point = np.array([self.bbox[0], self.bbox[2]]) # may be different for non-affine result
 
         if self.non_affine_transform is None:
@@ -142,7 +147,7 @@ class SingleTileRenderer:
                 weights_img = np.minimum(
                                     np.minimum(grid[0], self.height - 1 - grid[0]),
                                     np.minimum(grid[1], self.width - 1 - grid[1])
-                                ).astype(np.float32)
+                                ).astype(np.float32) + .5
                 self.weights = cv2.warpAffine(weights_img, adjusted_transform, self.shape, flags=cv2.INTER_AREA)
 
         else:
@@ -188,7 +193,7 @@ class SingleTileRenderer:
                 weights_img = np.minimum(
                                     np.minimum(grid[0], self.height - 1 - grid[0]),
                                     np.minimum(grid[1], self.width - 1 - grid[1])
-                                ).astype(np.float32)
+                                ).astype(np.float32) + .5
                 self.weights = cv2.remap(weights_img, map_x, map_y, cv2.INTER_CUBIC).T
                 self.weights[self.weights < 0] = 0
 
@@ -270,7 +275,43 @@ class SingleTileRenderer:
         # Take only the parts that are overlapping
         return cropped_img, (overlapping_area[0], overlapping_area[2]), cropped_distances
 
+class SingleTileRenderer(SingleTileRendererBase):
+    '''Implementation of SingleTileRendererBase with file path'''
+    
+    def __init__(self, img_path, width, height, 
+                 compute_mask=False, 
+                 compute_distances=True):
+        super(SingleTileRenderer, self).__init__(
+            width, height, compute_mask, compute_distances)
+        self.img_path = img_path
+        
+    def load(self):
+        return cv2.imread(self.img_path, 0)
 
+class AlphaTileRenderer(SingleTileRendererBase):
+    '''An alpha channel for a pre-existing single tile'''
+    
+    def __init__(self, other_renderer):
+        '''Initialize with another renderer
+        
+        :param other_renderer: A renderer derived from SingleTileRendererBase
+        '''
+        super(AlphaTileRenderer, self).__init__(
+            other_renderer.width, other_renderer.height, False, False)
+        pre, post = [
+            AffineModel(np.vstack([transform, [0, 0, 1]])
+                        if transform.shape[0] == 2
+                        else transform) 
+            for transform in 
+            other_renderer.pre_non_affine_transform, 
+            other_renderer.post_non_affine_transform]
+        self.add_transformation(pre)             
+        if other_renderer.non_affine_transform is not None:
+            self.add_transformation(other_renderer.non_affine_transform)
+            self.add_transformation(post)
+    
+    def load(self):
+        return np.ones((self.height, self.width), np.float32)
 
     # Helper methods (shouldn't be used from the outside)
 
