@@ -3,8 +3,6 @@ from multiple_tiles_renderer import MultipleTilesRenderer
 from single_tile_renderer import SingleTileRenderer
 import json
 import numpy as np
-import sys
-sys.path.append('../')
 import models
 
 
@@ -31,6 +29,5 @@ class TilespecRenderer:
 
     def add_transformation(self, model):
         """Adds a transformation to all tiles"""
-        for single_tile in self.single_tiles:
-            single_tile.add_transformation(model)
+        self.multi_renderer.add_transformation(model)
 

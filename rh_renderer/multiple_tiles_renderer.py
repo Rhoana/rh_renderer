@@ -1,5 +1,6 @@
 from single_tile_renderer import SingleTileRenderer, AlphaTileRenderer
 import numpy as np
+from pyrtree import RTree,Rect
 
 
 class MultipleTilesRenderer:
@@ -12,6 +13,12 @@ class MultipleTilesRenderer:
         """Receives a number of image paths, and for each a transformation matrix"""
         self.blend_type = self.BLEND_TYPE[blend_type]
         self.single_tiles = single_tiles
+        # Create an RTree of the bounding boxes of the tiles
+        self.rtree = RTree()
+        for t in self.single_tiles:
+            bbox = t.get_bbox()
+            # pyrtree uses the (x_min, y_min, x_max, y_max) notation
+            self.rtree.insert(t, Rect(bbox[0], bbox[2], bbox[1], bbox[3]))
         #should_compute_mask = False if self.blend_type == 0 else True
         #self.single_tiles = [SingleTileAffineRenderer(img_path, img_shape[1], img_shape[0], compute_mask=should_compute_mask) for img_path, img_shape in zip(img_paths, img_shapes)]
         #for i, matrix in enumerate(transform_matrices):
@@ -19,8 +26,13 @@ class MultipleTilesRenderer:
 
     def add_transformation(self, model):
         """Adds a transformation to all tiles"""
+        self.rtree = RTree()
         for single_tile in self.single_tiles:
             single_tile.add_transformation(model)
+            bbox = single_tile.get_bbox()
+            # pyrtree uses the (x_min, y_min, x_max, y_max) notation
+            self.rtree.insert(single_tile, Rect(bbox[0], bbox[2], bbox[1], bbox[3]))
+ 
         
     def render(self):
         if len(self.single_tiles) == 0:
@@ -40,8 +52,12 @@ class MultipleTilesRenderer:
         if self.blend_type == 0: # No blending
             res = np.zeros((round(to_y + 1 - from_y), round(to_x + 1 - from_x)), dtype=np.uint8)
             # render only relevant parts, and stitch them together
-            # TODO - filter only relevant tiles using kdtree or something similar
-            for t in self.single_tiles:
+            # filter only relevant tiles using rtree
+            rect_res = self.rtree.query_rect( Rect(from_x, from_y, to_x, to_y) )
+            for rtree_node in rect_res:
+                if not rtree_node.is_leaf():
+                    continue
+                t = rtree_node.leaf_obj()
                 t_img, t_start_point, _ = t.crop(from_x, from_y, to_x, to_y)
                 if t_img is not None:
                     res[t_start_point[1] - from_y: t_img.shape[0] + (t_start_point[1] - from_y),
@@ -57,8 +73,12 @@ class MultipleTilesRenderer:
                 np.float32)
 
             # render only relevant parts, and stitch them together
-            # TODO - filter only relevant tiles using kdtree or something similar
-            for t in self.single_tiles:
+            # filter only relevant tiles using rtree
+            rect_res = self.rtree.query_rect( Rect(from_x, from_y, to_x, to_y) )
+            for rtree_node in rect_res:
+                if not rtree_node.is_leaf():
+                    continue
+                t = rtree_node.leaf_obj()
                 t_img, t_start_point, t_mask = t.crop(from_x, from_y, to_x, to_y)
                 if t_img is not None:
                     t_mask, _, _ = AlphaTileRenderer(t).crop(
@@ -81,8 +101,12 @@ class MultipleTilesRenderer:
             res_weights = np.zeros((round(to_y + 1 - from_y), round(to_x + 1 - from_x)), dtype=np.uint16)
 
             # render only relevant parts, and stitch them together
-            # TODO - filter only relevant tiles using kdtree or something similar
-            for t in self.single_tiles:
+            # filter only relevant tiles using rtree
+            rect_res = self.rtree.query_rect( Rect(from_x, from_y, to_x, to_y) )
+            for rtree_node in rect_res:
+                if not rtree_node.is_leaf():
+                    continue
+                t = rtree_node.leaf_obj()
                 t_img, t_start_point, t_weights = t.crop_with_distances(from_x, from_y, to_x, to_y)
                 if t_img is not None:
                     print "actual image start_point:", t_start_point, "and shape:", t_img.shape

@@ -31,6 +31,5 @@ class TilespecAffineRenderer:
 
     def add_transformation(self, transform_matrix):
         """Adds a transformation to all tiles"""
-        for single_tile in self.single_tiles:
-            single_tile.add_transformation(transform_matrix[:2])
+        self.multi_renderer.add_transformation(transform_matrix[:2])
 
