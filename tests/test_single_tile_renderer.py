@@ -1,15 +1,15 @@
 import numpy as np
 import unittest
-from rh_renderer.single_tile_renderer import SingleTileRendererBase
+from rh_renderer.single_tile_renderer import SingleTileDynamicRendererBase
 from rh_renderer.models import TranslationModel, AffineModel
 
 
-class STR(SingleTileRendererBase):
+class STR(SingleTileDynamicRendererBase):
     
     def __init__(self, img, compute_mask=False, 
                 compute_distances=True):
         super(STR, self).__init__(
-            img.shape[1], img.shape[0], compute_mask, compute_distances)
+            img.shape[1], img.shape[0], compute_mask=compute_mask, compute_distances=compute_distances)
         self.__img = img
     
     def load(self):

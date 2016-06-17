@@ -10,32 +10,41 @@ from rh_renderer.models import AffineModel
 import scipy.interpolate as spint
 import scipy.spatial.qhull as qhull
 from scipy.spatial import ConvexHull
+import time
 
 class SingleTileRendererBase(object):
 
     def __init__(self, width, height, 
+                 bbox=None,
+                 transformation_models=[],
                  compute_mask=False, 
                  compute_distances=True):
         self.width = width
         self.height = height
-        # Starting with a single identity affine transformation
-        self.pre_non_affine_transform = np.eye(3)[:2]
-        self.non_affine_transform = None
-        self.post_non_affine_transform = np.eye(3)[:2]
         self.compute_mask = compute_mask
         self.mask = None
         self.compute_distances = compute_distances
         self.weights = None
-        self.bbox = [0, width - 1, 0, height - 1]
-        self.shape = (width, height)
-        # Store the pixel locations (x,y) of the surrounding polygon of the image
-        self.surrounding_polygon = np.array([[0., 0.], [width - 1., 0.], [width - 1., height - 1.], [0., height - 1.]])
-        self.start_point = (0, 0) # If only affine is used then this is always (bbox[0], bbox[2]), with affine it can be different
+        if bbox is None:
+            self.bbox = [0, width - 1, 0, height - 1]
+            self.shape = (width, height)
+        else:
+            self.bbox = bbox
+            self.shape = (self.bbox[1] - self.bbox[0] + 1, self.bbox[3] - self.bbox[2] + 1)
+
+        self.start_point = (self.bbox[0], self.bbox[2]) # If only affine is used then this is always (bbox[0], bbox[2]), with non-affine it might be different
+
+        # Starting with a single identity affine transformation
+        self.pre_non_affine_transform = np.eye(3)[:2]
+        self.non_affine_transform = None
+        self.post_non_affine_transform = np.eye(3)[:2]
+        for model in transformation_models:
+            self._add_transformation(model)
 
         # Save for caching
         self.already_rendered = False
 
-    def add_transformation(self, model):
+    def _add_transformation(self, model):
         if model.is_affine():
             new_model_matrix = model.get_matrix()
             # Need to add the transformation either to the pre_non_affine or the post_non_affine
@@ -51,31 +60,9 @@ class SingleTileRendererBase(object):
                 self.pre_non_affine_transform = new_transformation
             else:
                 self.post_non_affine_transform = new_transformation
-
-            # Apply the model to each of the surrounding polygon locations
-            self.surrounding_polygon = model.apply(self.surrounding_polygon)
         else:
             # Non-affine transformation
             self.non_affine_transform = model
-
-            # TODO - need to see if this returns a sufficient bounding box for the reverse transformation
-            # Find the new surrounding polygon locations
-            # using a forward transformation from the boundaries of the source image to the destination
-            boundary1 = np.array([[float(p), 0.] for p in np.arange(self.width)])
-            boundary2 = np.array([[float(p), float(self.height - 1)] for p in np.arange(self.width)])
-            boundary3 = np.array([[0., float(p)] for p in np.arange(self.height)])
-            boundary4 = np.array([[float(self.width - 1), float(p)] for p in np.arange(self.height)])
-            boundaries = np.concatenate((boundary1, boundary2, boundary3, boundary4))
-            boundaries = np.dot(self.pre_non_affine_transform[:2, :2], boundaries.T).T + self.pre_non_affine_transform[:, 2].reshape((1, 2))
-            self.surrounding_polygon = model.apply(boundaries)
-
-            # Find the new surrounding polygon locations (using the destination points of the non affine transformation)
-            #dest_points = model.get_point_map()[1]
-            #hull = ConvexHull(dest_points)
-            #self.surrounding_polygon = dest_points[hull.vertices]
-
-        # Update bbox and shape according to the new borders
-        self.bbox, self.shape = compute_bbox_and_shape(self.surrounding_polygon)
 
         # Remove any rendering
         self.already_rendered = False
@@ -83,41 +70,6 @@ class SingleTileRendererBase(object):
 
     def get_bbox(self):
         return self.bbox
-
-#    def contains_point(self, p):
-#        """Return True if the point is inside the image boundaries (bounding polygon)."""
-
-#    def get_min_distance(self, points):
-#        """Returns a list of minimal distances between each of the given points and any of the image boundaries (bounding polygon).
-#           Assumes that the given points are inside the bounding polygon."""
-#        #assert(p.shape == (2,))
-#        # Get the normals of each line, and compute the distance between the point and the normal
-#        # Based on method 2 (but for 2D) from: http://www.qc.edu.hk/math/Advanced%20Level/Point_to_line.htm
-#        denominators = [np.linalg.norm(self.corners[i] - self.corners[(i + 1) % len(self.corners)]) for i in range(len(self.corners))]
-#        self_normals = get_normals(self.corners)
-#        if points.shape == (2,): # A single point
-#            dist = np.min([np.linalg.norm(np.dot(n, points - c)) / denom
-#                        for c, n, denom in zip(self.corners, self_normals, denominators)])
-#            return dist
-#        else: # multiple points
-#            dists = [np.min([np.linalg.norm(np.dot(n, p - c)) / denom
-#                        for c, n, denom in zip(self.corners, self_normals, denominators)])
-#                            for p in points]
-#            return dists
-
-#    def is_overlapping(self, other_tile):
-#        """Uses Separating Axes Theorem (http://www.dyn4j.org/2010/01/sat/) in order to decide
-#           whether the the current transformed tile and the other transformed tile are overlapping"""
-#        # Fetch the normals of each tile
-#        self_normals = get_normals(self.corners)
-#        other_normals = get_normals(other_tile.corners)
-#        # Check all edges of self against the normals of the other tile
-#        if not check_normals_side(self.corners, self_normals, other_tile.corners):
-#            return True
-#        # Check all edges of the other tile against the normals of self
-#        if not check_normals_side(other_tile.corners, other_normals, self.corners):
-#            return True
-#        return False
 
     def load(self):
         raise NotImplementedError("Please implement load in a derived class")
@@ -127,7 +79,9 @@ class SingleTileRendererBase(object):
         if self.already_rendered:
             return self.img, self.start_point
 
+        #st_time = time.time()
         img = self.load()
+        #print "loading image time: {}".format(time.time() - st_time)
         self.start_point = np.array([self.bbox[0], self.bbox[2]]) # may be different for non-affine result
 
         if self.non_affine_transform is None:
@@ -275,20 +229,84 @@ class SingleTileRendererBase(object):
         # Take only the parts that are overlapping
         return cropped_img, (overlapping_area[0], overlapping_area[2]), cropped_distances
 
-class SingleTileRenderer(SingleTileRendererBase):
-    '''Implementation of SingleTileRendererBase with file path'''
-    
-    def __init__(self, img_path, width, height, 
+class SingleTileDynamicRendererBase(SingleTileRendererBase):
+
+    def __init__(self, width, height, 
+                 bbox=None,
+                 transformation_models=[],
                  compute_mask=False, 
                  compute_distances=True):
-        super(SingleTileRenderer, self).__init__(
-            width, height, compute_mask, compute_distances)
+        super(SingleTileDynamicRendererBase, self).__init__(
+            width, height, bbox, transformation_models, compute_mask, compute_distances)
+        # Store the pixel locations (x,y) of the surrounding polygon of the image
+        self.surrounding_polygon = np.array([[0., 0.], [width - 1., 0.], [width - 1., height - 1.], [0., height - 1.]])
+
+        # update the surrounding polygon according to the model
+        for model in transformation_models:
+            self._update_surrounding_polygon(model)
+
+    def add_transformation(self, model):
+        # Call the private add transformation method in the parent
+        super(SingleTileDynamicRendererBase, self)._add_transformation(model)
+
+        # update the surrounding polygon according to the model
+        self._update_surrounding_polygon(model)
+
+        # Update bbox and shape according to the new borders
+        self.bbox, self.shape = compute_bbox_and_shape(self.surrounding_polygon)
+
+    def _update_surrounding_polygon(self, model):
+        # Update the surroundin_polygon according to the new model
+        if model.is_affine():
+            self.surrounding_polygon = model.apply(self.surrounding_polygon)
+        else:
+            # TODO - need to see if this returns a sufficient bounding box for the reverse transformation
+            # Find the new surrounding polygon locations
+            # using a forward transformation from the boundaries of the source image to the destination
+            boundary1 = np.array([[float(p), 0.] for p in np.arange(self.width)])
+            boundary2 = np.array([[float(p), float(self.height - 1)] for p in np.arange(self.width)])
+            boundary3 = np.array([[0., float(p)] for p in np.arange(self.height)])
+            boundary4 = np.array([[float(self.width - 1), float(p)] for p in np.arange(self.height)])
+            boundaries = np.concatenate((boundary1, boundary2, boundary3, boundary4))
+            boundaries = np.dot(self.pre_non_affine_transform[:2, :2], boundaries.T).T + self.pre_non_affine_transform[:, 2].reshape((1, 2))
+            self.surrounding_polygon = model.apply(boundaries)
+
+
+
+
+class SingleTileStaticRenderer(SingleTileRendererBase):
+    '''Implementation of SingleTileRendererBase with file path for static (no further transformations) images'''
+    
+    def __init__(self, img_path, width, height, 
+                 bbox=None,
+                 transformation_models=[],
+                 compute_mask=False, 
+                 compute_distances=True):
+        super(SingleTileStaticRenderer, self).__init__(
+            width, height, bbox, transformation_models, compute_mask, compute_distances)
         self.img_path = img_path
         
     def load(self):
         return cv2.imread(self.img_path, 0)
 
-class AlphaTileRenderer(SingleTileRendererBase):
+class SingleTileRenderer(SingleTileDynamicRendererBase):
+    '''Implementation of SingleTileRendererBase with file path for dynamic (new transformations can be applied) images'''
+    
+    def __init__(self, img_path, width, height, 
+                 bbox=None,
+                 transformation_models=[],
+                 compute_mask=False, 
+                 compute_distances=True):
+        super(SingleTileRenderer, self).__init__(
+            width, height, bbox, transformation_models, compute_mask, compute_distances)
+        self.img_path = img_path
+        
+    def load(self):
+        return cv2.imread(self.img_path, 0)
+
+
+
+class AlphaTileRenderer(SingleTileDynamicRendererBase):
     '''An alpha channel for a pre-existing single tile'''
     
     def __init__(self, other_renderer):
@@ -297,7 +315,7 @@ class AlphaTileRenderer(SingleTileRendererBase):
         :param other_renderer: A renderer derived from SingleTileRendererBase
         '''
         super(AlphaTileRenderer, self).__init__(
-            other_renderer.width, other_renderer.height, False, False)
+            other_renderer.width, other_renderer.height, None, [], False, False)
         pre, post = [
             AffineModel(np.vstack([transform, [0, 0, 1]])
                         if transform.shape[0] == 2
@@ -313,7 +331,10 @@ class AlphaTileRenderer(SingleTileRendererBase):
     def load(self):
         return np.ones((self.height, self.width), np.float32)
 
-    # Helper methods (shouldn't be used from the outside)
+
+
+
+# Helper methods (shouldn't be used from the outside)
 
 
 def compute_bbox_and_shape(polygon):
@@ -327,69 +348,4 @@ def compute_bbox_and_shape(polygon):
     return new_bbox, new_shape
 
 
-
-#def get_normals(corners):
-#    """Given a polygon corners list, returns a list of non-normalized normals for each edge"""
-#    edges = [(corners[i] - corners[(i + 1) % len(corners)]) for i in range(len(corners))]
-#    normals = [(-e[1], e[0]) for e in edges]
-#    return normals
-
-#def check_normals_side(corners1, normals1, corners2):
-#    """Checks if all corners2 appear on one side of polygon1"""
-#    assert(len(corners1) == len(normals1))
-#    for c, n in zip(corners1, normals1):
-#        signs2 = [np.sign(np.dot(n, p - c)) for p in corners2]
-#        signs2 = [s for s in signs2 if abs(s - 0.) > 0.0001] # remove all +-0.
-#        if np.any(signs2 != signs2[0]):
-#            return False
-#    return True
-
-#def find_per_row_first_last_one(arr):
-#    """Given a 2D array (of only 1's in a quadrangle shape, and 0's), for each row find the first and the last occurrance of 1.
-#       Returns a 2D array with the same number of rows as arr, and 2 columns with the column-indices
-#       of the first and last one. If a row has only 0's, -1 will be returned on both indices"""
-#    res = np.full((arr.shape[0], 2), -1, dtype=np.int16)
-#    # take the first and last column of arr, and find all 1's
-#    arr_T = arr.T
-#    first_col_non_zero = np.nonzero(arr_T[0])
-#    last_col_non_zero = np.nonzero(arr_T[-1])
-#    for r in first_col_non_zero[0]:
-#        res[r, 0] = 0
-#    for r in last_col_non_zero[0]:
-#        res[r, 1] = arr.shape[1] - 1
-#    # Now find the positions where the value changes in the middle of the matrix using np.diff
-#    nonzero = np.nonzero(np.diff(arr))
-#    # nonzero contents for each row, r:
-#    #   if nonzero doesn't have a row with r, the row has the same value (either 0 or 1)
-#    #   if nonzero has a single row with r, the row changes the value once (either from 0 to 1 or from 1 to 0)
-#    #   if nonzero has row r twice, the row changes both from 0 to 1 and then from 1 to 0
-#    for r, c in zip(*nonzero):
-#        if res[r, 0] > -1:
-#            # already updated the left value, or there is a single change from 1 to 0
-#            res[r, 1] = c
-#        else:
-#            res[r, 0] = c + 1
-#    return res
-
-# An implementation of scipy's interpolate.griddata broken to 2 parts
-# (taken from: http://stackoverflow.com/questions/20915502/speedup-scipy-griddata-for-multiple-interpolations-between-two-irregular-grids)
-
-def interp_weights(xyz, uvw):
-    """The initial part of griddata (using linear interpolation) -
-       Creates a Delaunay mesh triangulation of the source points,
-       each point in the mesh is transformed to the new mesh
-       using an interpolation of each point inside a triangle is done using barycentric coordinates"""
-    tri = qhull.Delaunay(xyz)
-    simplex = tri.find_simplex(uvw)
-    vertices = np.take(tri.simplices, simplex, axis=0)
-    temp = np.take(tri.transform, simplex, axis=0)
-    delta = uvw - temp[:, d]
-    bary = np.einsum('njk,nk->nj', temp[:, :d, :], delta)
-    return vertices, np.hstack((bary, 1 - bary.sum(axis=1, keepdims=True)))
-
-def interpolate(values, vtx, wts, fill_value=np.nan):
-    """Executes the interpolation step of griddata"""
-    ret = np.einsum('nj,nj->n', np.take(values, vtx), wts)
-    ret[np.any(wts < 0, axis=1)] = fill_value
-    return ret
 
