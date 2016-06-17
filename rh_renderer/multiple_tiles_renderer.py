@@ -1,4 +1,4 @@
-from single_tile_renderer import SingleTileRenderer, AlphaTileRenderer
+from single_tile_renderer import AlphaTileRenderer
 import numpy as np
 from pyrtree import RTree,Rect
 
@@ -20,7 +20,6 @@ class MultipleTilesRenderer:
             # pyrtree uses the (x_min, y_min, x_max, y_max) notation
             self.rtree.insert(t, Rect(bbox[0], bbox[2], bbox[1], bbox[3]))
         #should_compute_mask = False if self.blend_type == 0 else True
-        #self.single_tiles = [SingleTileAffineRenderer(img_path, img_shape[1], img_shape[0], compute_mask=should_compute_mask) for img_path, img_shape in zip(img_paths, img_shapes)]
         #for i, matrix in enumerate(transform_matrices):
         #    self.single_tiles[i].add_transformation(matrix)
 
