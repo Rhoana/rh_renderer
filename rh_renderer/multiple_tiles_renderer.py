@@ -9,12 +9,13 @@ class MultipleTilesRenderer:
             "AVERAGING" : 1,
             "LINEAR" : 2
         }
-    def __init__(self, single_tiles, blend_type="NO_BLENDING"):
+    def __init__(self, single_tiles, blend_type="NO_BLENDING", dtype=np.uint8):
         """Receives a number of image paths, and for each a transformation matrix"""
         self.blend_type = self.BLEND_TYPE[blend_type]
         self.single_tiles = single_tiles
         # Create an RTree of the bounding boxes of the tiles
         self.rtree = RTree()
+        self.dtype = dtype
         for t in self.single_tiles:
             bbox = t.get_bbox()
             # pyrtree uses the (x_min, y_min, x_max, y_max) notation
@@ -49,8 +50,7 @@ class MultipleTilesRenderer:
 
         # Distinguish between the different types of blending
         if self.blend_type == 0: # No blending
-            res = np.zeros((round(to_y + 1 - from_y), round(to_x + 1 - from_x)), dtype=np.uint8)
-            # render only relevant parts, and stitch them together
+            res = np.zeros((round(to_y + 1 - from_y), round(to_x + 1 - from_x)), dtype=self.dtype)
             # filter only relevant tiles using rtree
             rect_res = self.rtree.query_rect( Rect(from_x, from_y, to_x, to_y) )
             for rtree_node in rect_res:
@@ -90,7 +90,7 @@ class MultipleTilesRenderer:
             # Change the values of 0 in the mask to 1, to avoid division by 0
             res_mask[res_mask == 0] = 1
             res = res / res_mask
-            res = np.maximum(0, np.minimum(255, res)).astype(np.uint8)
+            res = np.maximum(0, np.minimum(np.iinfo(self.dtype).max, res)).astype(self.dtype)
 
         elif self.blend_type == 2: # Linear averaging
             # Do the calculation on a uint32 image (for overlapping areas), and convert to uint8 at the end
@@ -117,7 +117,7 @@ class MultipleTilesRenderer:
             # Change the weights that are 0 to 1, to avoid division by 0
             res_weights[res_weights < 1] = 1
             res = res / res_weights
-            res = np.maximum(0, np.minimum(255, res)).astype(np.uint8)
+            res = np.maximum(0, np.minimum(np.iinfo(self.dtype).max, res)).astype(self.dtype)
 
         return res, (from_x, from_y)
 
