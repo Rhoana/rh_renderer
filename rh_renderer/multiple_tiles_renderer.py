@@ -110,9 +110,10 @@ class MultipleTilesRenderer:
                 if t_img is not None:
                     print "actual image start_point:", t_start_point, "and shape:", t_img.shape
                     res[t_start_point[1] - from_y: t_img.shape[0] + (t_start_point[1] - from_y),
-                        t_start_point[0] - from_x: t_img.shape[1] + (t_start_point[0] - from_x)] += t_img * t_weights
+                        t_start_point[0] - from_x: t_img.shape[1] + (t_start_point[0] - from_x)] += \
+                        (t_img * t_weights).astype(res.dtype)
                     res_weights[t_start_point[1] - from_y: t_img.shape[0] + (t_start_point[1] - from_y),
-                                t_start_point[0] - from_x: t_img.shape[1] + (t_start_point[0] - from_x)] += t_weights
+                                t_start_point[0] - from_x: t_img.shape[1] + (t_start_point[0] - from_x)] += t_weights.astype(res_weights.dtype)
 
             # Change the weights that are 0 to 1, to avoid division by 0
             res_weights[res_weights < 1] = 1
