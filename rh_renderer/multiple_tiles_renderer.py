@@ -65,10 +65,11 @@ class MultipleTilesRenderer:
         elif self.blend_type == 1: # Averaging
             # Do the calculation on a uint16 image (for overlapping areas), and convert to uint8 at the end
             res = np.zeros(
-                (round(to_y + 1 - from_y), round(to_x + 1 - from_x)), 
+                (int(round(to_y + 1 - from_y)), 
+                 int(round(to_x + 1 - from_x))), 
                 np.float32)
             res_mask = np.zeros(
-                (round(to_y + 1 - from_y), round(to_x + 1 - from_x)),
+                (int(round(to_y + 1 - from_y)), int(round(to_x + 1 - from_x))),
                 np.float32)
 
             # render only relevant parts, and stitch them together
@@ -83,7 +84,7 @@ class MultipleTilesRenderer:
                     t_mask, _, _ = AlphaTileRenderer(t).crop(
                         from_x, from_y, to_x, to_y)
                     res[t_start_point[1] - from_y: t_img.shape[0] + (t_start_point[1] - from_y),
-                        t_start_point[0] - from_x: t_img.shape[1] + (t_start_point[0] - from_x)] += t_img.astype(res.type)
+                        t_start_point[0] - from_x: t_img.shape[1] + (t_start_point[0] - from_x)] += t_img.astype(res.dtype)
                     res_mask[t_start_point[1] - from_y: t_img.shape[0] + (t_start_point[1] - from_y),
                              t_start_point[0] - from_x: t_img.shape[1] + (t_start_point[0] - from_x)] += t_mask
 
