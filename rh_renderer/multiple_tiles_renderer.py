@@ -83,7 +83,7 @@ class MultipleTilesRenderer:
                     t_mask, _, _ = AlphaTileRenderer(t).crop(
                         from_x, from_y, to_x, to_y)
                     res[t_start_point[1] - from_y: t_img.shape[0] + (t_start_point[1] - from_y),
-                        t_start_point[0] - from_x: t_img.shape[1] + (t_start_point[0] - from_x)] += t_img
+                        t_start_point[0] - from_x: t_img.shape[1] + (t_start_point[0] - from_x)] += t_img.astype(res.type)
                     res_mask[t_start_point[1] - from_y: t_img.shape[0] + (t_start_point[1] - from_y),
                              t_start_point[0] - from_x: t_img.shape[1] + (t_start_point[0] - from_x)] += t_mask
 
@@ -96,8 +96,8 @@ class MultipleTilesRenderer:
             # Do the calculation on a uint32 image (for overlapping areas), and convert to uint8 at the end
             # For each pixel use the min-distance to an edge as a weight, and store the
             # average the outcome according to the weight
-            res = np.zeros((round(to_y + 1 - from_y), round(to_x + 1 - from_x)), dtype=np.uint32)
-            res_weights = np.zeros((round(to_y + 1 - from_y), round(to_x + 1 - from_x)), dtype=np.uint16)
+            res = np.zeros((int(round(to_y + 1 - from_y)), int(round(to_x + 1 - from_x))), dtype=np.uint32)
+            res_weights = np.zeros((int(round(to_y + 1 - from_y)), int(round(to_x + 1 - from_x))), dtype=np.uint16)
 
             # render only relevant parts, and stitch them together
             # filter only relevant tiles using rtree

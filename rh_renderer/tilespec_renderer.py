@@ -8,7 +8,7 @@ import models
 
 class TilespecRenderer:
 
-    def __init__(self, tilespec):
+    def __init__(self, tilespec, dtype=np.uint8):
         self.single_tiles = [SingleTileRenderer(
                                 tile_ts["mipmapLevels"]["0"]["imageUrl"].replace("file://", ""), tile_ts["width"], tile_ts["height"], compute_distances=True)
                             for tile_ts in tilespec]
@@ -18,7 +18,8 @@ class TilespecRenderer:
                 model = models.Transforms.from_tilespec(t)
                 tile.add_transformation(model)
 
-        self.multi_renderer = MultipleTilesRenderer(self.single_tiles, blend_type="LINEAR")
+        self.multi_renderer = MultipleTilesRenderer(
+            self.single_tiles, blend_type="LINEAR", dtype=dtype)
         
 
     def render(self):

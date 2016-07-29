@@ -287,7 +287,7 @@ class SingleTileStaticRenderer(SingleTileRendererBase):
         self.img_path = img_path
         
     def load(self):
-        return cv2.imread(self.img_path, 0)
+        return cv2.imread(self.img_path, cv2.IMREAD_ANYDEPTH)
 
 class SingleTileRenderer(SingleTileDynamicRendererBase):
     '''Implementation of SingleTileRendererBase with file path for dynamic (new transformations can be applied) images'''
@@ -302,7 +302,7 @@ class SingleTileRenderer(SingleTileDynamicRendererBase):
         self.img_path = img_path
         
     def load(self):
-        return cv2.imread(self.img_path, 0)
+        return cv2.imread(self.img_path, cv2.IMREAD_ANYDEPTH)
 
 
 
