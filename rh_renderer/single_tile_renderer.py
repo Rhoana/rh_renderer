@@ -18,12 +18,14 @@ class SingleTileRendererBase(object):
                  bbox=None,
                  transformation_models=[],
                  compute_mask=False, 
-                 compute_distances=True):
+                 compute_distances=True,
+                 reference_histogram=None):
         self.width = width
         self.height = height
         self.compute_mask = compute_mask
         self.mask = None
         self.compute_distances = compute_distances
+        self.reference_histogram = reference_histogram
         self.weights = None
         if bbox is None:
             self.bbox = [0, width - 1, 0, height - 1]
@@ -81,6 +83,12 @@ class SingleTileRendererBase(object):
 
         #st_time = time.time()
         img = self.load()
+        # Normalize the histogram if needed (matched against a reference set)
+        if self.reference_histogram is not None:
+            #img = cv2.equalizeHist(img)
+            #clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+            #img = clahe.apply(img)
+            img = self.reference_histogram.match_histogram(img)
         #print "loading image time: {}".format(time.time() - st_time)
         self.start_point = np.array([self.bbox[0], self.bbox[2]]) # may be different for non-affine result
 
@@ -235,9 +243,10 @@ class SingleTileDynamicRendererBase(SingleTileRendererBase):
                  bbox=None,
                  transformation_models=[],
                  compute_mask=False, 
-                 compute_distances=True):
+                 compute_distances=True,
+                 reference_histogram=None):
         super(SingleTileDynamicRendererBase, self).__init__(
-            width, height, bbox, transformation_models, compute_mask, compute_distances)
+            width, height, bbox, transformation_models, compute_mask, compute_distances, reference_histogram)
         # Store the pixel locations (x,y) of the surrounding polygon of the image
         self.surrounding_polygon = np.array([[0., 0.], [width - 1., 0.], [width - 1., height - 1.], [0., height - 1.]])
 
@@ -281,9 +290,10 @@ class SingleTileStaticRenderer(SingleTileRendererBase):
                  bbox=None,
                  transformation_models=[],
                  compute_mask=False, 
-                 compute_distances=True):
+                 compute_distances=True,
+                 reference_histogram=None):
         super(SingleTileStaticRenderer, self).__init__(
-            width, height, bbox, transformation_models, compute_mask, compute_distances)
+            width, height, bbox, transformation_models, compute_mask, compute_distances, reference_histogram)
         self.img_path = img_path
         
     def load(self):
@@ -296,9 +306,10 @@ class SingleTileRenderer(SingleTileDynamicRendererBase):
                  bbox=None,
                  transformation_models=[],
                  compute_mask=False, 
-                 compute_distances=True):
+                 compute_distances=True,
+                 reference_histogram=None):
         super(SingleTileRenderer, self).__init__(
-            width, height, bbox, transformation_models, compute_mask, compute_distances)
+            width, height, bbox, transformation_models, compute_mask, compute_distances, reference_histogram)
         self.img_path = img_path
         
     def load(self):
