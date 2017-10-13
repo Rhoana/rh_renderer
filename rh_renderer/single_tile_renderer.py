@@ -18,14 +18,14 @@ class SingleTileRendererBase(object):
                  bbox=None,
                  transformation_models=[],
                  compute_mask=False, 
-                 compute_distances=True,
-                 reference_histogram=None):
+                 compute_distances=True):
+                 #hist_adjuster=None):
         self.width = width
         self.height = height
         self.compute_mask = compute_mask
         self.mask = None
         self.compute_distances = compute_distances
-        self.reference_histogram = reference_histogram
+        #self.hist_adjuster = hist_adjuster
         self.weights = None
         if bbox is None:
             self.bbox = [0, width - 1, 0, height - 1]
@@ -83,12 +83,6 @@ class SingleTileRendererBase(object):
 
         #st_time = time.time()
         img = self.load()
-        # Normalize the histogram if needed (matched against a reference set)
-        if self.reference_histogram is not None:
-            #img = cv2.equalizeHist(img)
-            #clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
-            #img = clahe.apply(img)
-            img = self.reference_histogram.match_histogram(img)
         #print "loading image time: {}".format(time.time() - st_time)
         self.start_point = np.array([self.bbox[0], self.bbox[2]]) # may be different for non-affine result
 
@@ -103,6 +97,7 @@ class SingleTileRendererBase(object):
                 mask_img = np.ones(img.shape)
                 self.mask = cv2.warpAffine(mask_img, adjusted_transform, self.shape, flags=cv2.INTER_AREA)
                 self.mask[self.mask > 0] = 1
+                self.mask = self.mask.astype(np.uint8)
             if self.compute_distances:
                 # The initial weights for each pixel is the minimum from the image boundary
                 grid = np.mgrid[0:self.height, 0:self.width]
@@ -149,6 +144,7 @@ class SingleTileRendererBase(object):
                 mask_img = np.ones(img.shape)
                 self.mask = cv2.remap(mask_img, map_x, map_y, cv2.INTER_CUBIC).T
                 self.mask[self.mask > 0] = 1
+                self.mask = self.mask.astype(np.uint8)
             if self.compute_distances:
                 # The initial weights for each pixel is the minimum from the image boundary
                 grid = np.mgrid[0:self.height, 0:self.width]
@@ -196,11 +192,11 @@ class SingleTileRendererBase(object):
             return None, None, None
 
 
-        cropped_img = self.img[overlapping_area[2] - actual_bbox[2]:overlapping_area[3] - actual_bbox[2] + 1,
-                               overlapping_area[0] - actual_bbox[0]:overlapping_area[1] - actual_bbox[0] + 1]
+        cropped_img = self.img[int(overlapping_area[2] - actual_bbox[2]):int(overlapping_area[3] - actual_bbox[2] + 1),
+                               int(overlapping_area[0] - actual_bbox[0]):int(overlapping_area[1] - actual_bbox[0] + 1)]
         if self.compute_mask:
-            cropped_mask = self.mask[overlapping_area[2] - actual_bbox[2]:overlapping_area[3] - actual_bbox[2] + 1,
-                                     overlapping_area[0] - actual_bbox[0]:overlapping_area[1] - actual_bbox[0] + 1]
+            cropped_mask = self.mask[int(overlapping_area[2] - actual_bbox[2]):int(overlapping_area[3] - actual_bbox[2] + 1),
+                                     int(overlapping_area[0] - actual_bbox[0]):int(overlapping_area[1] - actual_bbox[0] + 1)]
         # Take only the parts that are overlapping
         return cropped_img, (overlapping_area[0], overlapping_area[2]), cropped_mask
 
@@ -228,11 +224,11 @@ class SingleTileRendererBase(object):
             # No overlap between the area and the tile
             return None, None, None
 
-        cropped_img = self.img[overlapping_area[2] - actual_bbox[2]:overlapping_area[3] - actual_bbox[2] + 1,
-                               overlapping_area[0] - actual_bbox[0]:overlapping_area[1] - actual_bbox[0] + 1]
+        cropped_img = self.img[int(overlapping_area[2] - actual_bbox[2]):int(overlapping_area[3] - actual_bbox[2] + 1),
+                               int(overlapping_area[0] - actual_bbox[0]):int(overlapping_area[1] - actual_bbox[0] + 1)]
         if self.compute_distances:
-            cropped_distances = self.weights[overlapping_area[2] - actual_bbox[2]:overlapping_area[3] - actual_bbox[2] + 1,
-                                             overlapping_area[0] - actual_bbox[0]:overlapping_area[1] - actual_bbox[0] + 1]
+            cropped_distances = self.weights[int(overlapping_area[2] - actual_bbox[2]):int(overlapping_area[3] - actual_bbox[2] + 1),
+                                             int(overlapping_area[0] - actual_bbox[0]):int(overlapping_area[1] - actual_bbox[0] + 1)]
            
         # Take only the parts that are overlapping
         return cropped_img, (overlapping_area[0], overlapping_area[2]), cropped_distances
@@ -243,10 +239,9 @@ class SingleTileDynamicRendererBase(SingleTileRendererBase):
                  bbox=None,
                  transformation_models=[],
                  compute_mask=False, 
-                 compute_distances=True,
-                 reference_histogram=None):
+                 compute_distances=True):
         super(SingleTileDynamicRendererBase, self).__init__(
-            width, height, bbox, transformation_models, compute_mask, compute_distances, reference_histogram)
+            width, height, bbox, transformation_models, compute_mask, compute_distances)
         # Store the pixel locations (x,y) of the surrounding polygon of the image
         self.surrounding_polygon = np.array([[0., 0.], [width - 1., 0.], [width - 1., height - 1.], [0., height - 1.]])
 
@@ -291,13 +286,23 @@ class SingleTileStaticRenderer(SingleTileRendererBase):
                  transformation_models=[],
                  compute_mask=False, 
                  compute_distances=True,
-                 reference_histogram=None):
+                 hist_adjuster=None):
         super(SingleTileStaticRenderer, self).__init__(
-            width, height, bbox, transformation_models, compute_mask, compute_distances, reference_histogram)
+            width, height, bbox, transformation_models, compute_mask, compute_distances)
         self.img_path = img_path
+        self.hist_adjuster = hist_adjuster
         
     def load(self):
-        return cv2.imread(self.img_path, 0)
+        img = cv2.imread(self.img_path, 0)
+        # Normalize the histogram if needed
+        if self.hist_adjuster is not None:
+            #img = cv2.equalizeHist(img)
+            #clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+            #img = clahe.apply(img)
+            img = self.hist_adjuster.adjust_histogram(self.img_path, img)
+
+        return img
+
 
 class SingleTileRenderer(SingleTileDynamicRendererBase):
     '''Implementation of SingleTileRendererBase with file path for dynamic (new transformations can be applied) images'''
@@ -307,13 +312,22 @@ class SingleTileRenderer(SingleTileDynamicRendererBase):
                  transformation_models=[],
                  compute_mask=False, 
                  compute_distances=True,
-                 reference_histogram=None):
+                 hist_adjuster=None):
         super(SingleTileRenderer, self).__init__(
-            width, height, bbox, transformation_models, compute_mask, compute_distances, reference_histogram)
+            width, height, bbox, transformation_models, compute_mask, compute_distances)
         self.img_path = img_path
+        self.hist_adjuster = hist_adjuster
         
     def load(self):
-        return cv2.imread(self.img_path, 0)
+        img = cv2.imread(self.img_path, 0)
+        # Normalize the histogram if needed
+        if self.hist_adjuster is not None:
+            #img = cv2.equalizeHist(img)
+            #clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+            #img = clahe.apply(img)
+            img = self.hist_adjuster.adjust_histogram(self.img_path, img)
+
+        return img
 
 
 
