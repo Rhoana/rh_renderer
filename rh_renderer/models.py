@@ -165,9 +165,9 @@ class RigidModel(AbstractAffineModel):
         Returns a new 2D point(s) after applying the inverse transformation on the given point(s) p
         """
         # The inverse matrix of the [2,2] rigid matrix is similar to the forward matrix (the angle is negative),
-        # the delta needs to be computed by R-1*delta
+        # the delta needs to be computed by R-1*-delta
         inv_delta = np.dot([[self.cos_val, self.sin_val],
-                       [-self.sin_val, self.cos_val]], self.delta).T
+                       [-self.sin_val, self.cos_val]], -self.delta).T
         if p.ndim == 1:
             return np.dot([[self.cos_val, self.sin_val],
                        [-self.sin_val, self.cos_val]],
