@@ -1,11 +1,11 @@
 # Renders a given tilespec in 1/4 resolution
+from __future__ import print_function
 import pylab
-from context import tilespec_renderer
-from tilespec_renderer import TilespecRenderer
+from rh_renderer.tilespec_renderer import TilespecRenderer
 import numpy as np
 import time
 import json
-import models
+from rh_renderer import models
 
 
 if __name__ == '__main__':
@@ -27,7 +27,7 @@ if __name__ == '__main__':
 
     start_time = time.time()
     img1, start_point1 = renderer1.render()
-    print "Start point is at:", start_point1, "image shape:", img1.shape, "took: {} seconds".format(time.time() - start_time)
+    print("Start point is at:", start_point1, "image shape:", img1.shape, "took: {} seconds".format(time.time() - start_time))
     pylab.figure()
     pylab.imshow(img1, cmap='gray', vmin=0., vmax=255.)
 

@@ -1,9 +1,9 @@
 # Allows rendering a given tilespec
-from multiple_tiles_renderer import MultipleTilesRenderer
-from single_tile_renderer import SingleTileRenderer
+from .multiple_tiles_renderer import MultipleTilesRenderer
+from .single_tile_renderer import SingleTileRenderer
 import json
 import numpy as np
-import models
+from . import models
 
 
 class TilespecRenderer:

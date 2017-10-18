@@ -32,17 +32,17 @@ class AbstractModel(object):
         return accepted_ratio, good_dists_mask, 0
 
     def apply(self, p):
-        raise RuntimeError, "Not implemented, but probably should be"
+        raise RuntimeError("Not implemented, but probably should be")
  
 
     def fit(self, X, y):
-        raise RuntimeError, "Not implemented, but probably should be"
+        raise RuntimeError("Not implemented, but probably should be")
 
     def set_from_modelspec(self, s):
-        raise RuntimeError, "Not implemented, but probably should be"
+        raise RuntimeError("Not implemented, but probably should be")
 
     def to_modelspec(self):
-        raise RuntimeError, "Not implemented, but probably should be"
+        raise RuntimeError("Not implemented, but probably should be")
 
     def is_affine(self):
         return False
@@ -53,7 +53,7 @@ class AbstractAffineModel(AbstractModel):
         pass
 
     def get_matrix(self):
-        raise RuntimeError, "Not implemented, but probably should be"
+        raise RuntimeError("Not implemented, but probably should be")
 
 
     def apply(self, p):
@@ -360,7 +360,7 @@ class AffineModel(AbstractAffineModel):
         # make sure that this a 3x3 matrix
         m = np.array(m)
         if m.shape != (3, 3):
-            raise RuntimeError, "Error when parsing the given affine matrix, should be of size 3x3"
+            raise RuntimeError("Error when parsing the given affine matrix, should be of size 3x3")
         self.m = m
 
     def apply(self, p):

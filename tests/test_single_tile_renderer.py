@@ -1,3 +1,4 @@
+from __future__ import print_function
 import numpy as np
 import unittest
 from rh_renderer.single_tile_renderer import SingleTileDynamicRendererBase
@@ -71,8 +72,8 @@ class TestSingleTileRenderer(unittest.TestCase):
         mask, start = renderer.fetch_mask()
         self.assertEqual(mask[0, 0], 0)
         self.assertEqual(mask[-1, -1], 0)
-        self.assertTrue(np.all(mask[mask.shape[0]/2] == 1))
-        self.assertTrue(np.all(mask[:, mask.shape[1]/2] == 1))
+        self.assertTrue(np.all(mask[int(mask.shape[0]/2)] == 1))
+        self.assertTrue(np.all(mask[:, int(mask.shape[1]/2)] == 1))
     
     def test_04_01_crop(self):
         r = np.random.RandomState(12345)
@@ -117,9 +118,9 @@ class TestSingleTileRenderer(unittest.TestCase):
         self.assertEqual(cropped_distances[1, 1], 0)
         self.assertEqual(cropped_distances[-2, -2], 0)
         self.assertGreater(
-            cropped_distances[1, cropped_distances.shape[1]/2], .5)
+            cropped_distances[1, int(cropped_distances.shape[1]/2)], .5)
         self.assertLessEqual(
-            cropped_distances[1, cropped_distances.shape[1]/2], 1.5)
+            cropped_distances[1, int(cropped_distances.shape[1]/2)], 1.5)
         
 
 if __name__ == "__main__":

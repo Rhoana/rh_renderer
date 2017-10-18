@@ -95,6 +95,7 @@ class SingleTileRendererBase(object):
                 mask_img = np.ones(img.shape)
                 self.mask = cv2.warpAffine(mask_img, adjusted_transform, self.shape, flags=cv2.INTER_AREA)
                 self.mask[self.mask > 0] = 1
+                self.mask = self.mask.astype(np.uint8)
             if self.compute_distances:
                 # The initial weights for each pixel is the minimum from the image boundary
                 grid = np.mgrid[0:self.height, 0:self.width]
@@ -141,6 +142,7 @@ class SingleTileRendererBase(object):
                 mask_img = np.ones(img.shape)
                 self.mask = cv2.remap(mask_img, map_x, map_y, cv2.INTER_CUBIC).T
                 self.mask[self.mask > 0] = 1
+                self.mask = self.mask.astype(np.uint8)
             if self.compute_distances:
                 # The initial weights for each pixel is the minimum from the image boundary
                 grid = np.mgrid[0:self.height, 0:self.width]
@@ -188,11 +190,11 @@ class SingleTileRendererBase(object):
             return None, None, None
 
 
-        cropped_img = self.img[overlapping_area[2] - actual_bbox[2]:overlapping_area[3] - actual_bbox[2] + 1,
-                               overlapping_area[0] - actual_bbox[0]:overlapping_area[1] - actual_bbox[0] + 1]
+        cropped_img = self.img[int(overlapping_area[2] - actual_bbox[2]):int(overlapping_area[3] - actual_bbox[2] + 1),
+                               int(overlapping_area[0] - actual_bbox[0]):int(overlapping_area[1] - actual_bbox[0] + 1)]
         if self.compute_mask:
-            cropped_mask = self.mask[overlapping_area[2] - actual_bbox[2]:overlapping_area[3] - actual_bbox[2] + 1,
-                                     overlapping_area[0] - actual_bbox[0]:overlapping_area[1] - actual_bbox[0] + 1]
+            cropped_mask = self.mask[int(overlapping_area[2] - actual_bbox[2]):int(overlapping_area[3] - actual_bbox[2] + 1),
+                                     int(overlapping_area[0] - actual_bbox[0]):int(overlapping_area[1] - actual_bbox[0] + 1)]
         # Take only the parts that are overlapping
         return cropped_img, (overlapping_area[0], overlapping_area[2]), cropped_mask
 
@@ -220,11 +222,11 @@ class SingleTileRendererBase(object):
             # No overlap between the area and the tile
             return None, None, None
 
-        cropped_img = self.img[overlapping_area[2] - actual_bbox[2]:overlapping_area[3] - actual_bbox[2] + 1,
-                               overlapping_area[0] - actual_bbox[0]:overlapping_area[1] - actual_bbox[0] + 1]
+        cropped_img = self.img[int(overlapping_area[2] - actual_bbox[2]):int(overlapping_area[3] - actual_bbox[2] + 1),
+                               int(overlapping_area[0] - actual_bbox[0]):int(overlapping_area[1] - actual_bbox[0] + 1)]
         if self.compute_distances:
-            cropped_distances = self.weights[overlapping_area[2] - actual_bbox[2]:overlapping_area[3] - actual_bbox[2] + 1,
-                                             overlapping_area[0] - actual_bbox[0]:overlapping_area[1] - actual_bbox[0] + 1]
+            cropped_distances = self.weights[int(overlapping_area[2] - actual_bbox[2]):int(overlapping_area[3] - actual_bbox[2] + 1),
+                                             int(overlapping_area[0] - actual_bbox[0]):int(overlapping_area[1] - actual_bbox[0] + 1)]
            
         # Take only the parts that are overlapping
         return cropped_img, (overlapping_area[0], overlapping_area[2]), cropped_distances
@@ -321,8 +323,8 @@ class AlphaTileRenderer(SingleTileDynamicRendererBase):
                         if transform.shape[0] == 2
                         else transform) 
             for transform in 
-            other_renderer.pre_non_affine_transform, 
-            other_renderer.post_non_affine_transform]
+            [other_renderer.pre_non_affine_transform, 
+            other_renderer.post_non_affine_transform]]
         self.add_transformation(pre)             
         if other_renderer.non_affine_transform is not None:
             self.add_transformation(other_renderer.non_affine_transform)

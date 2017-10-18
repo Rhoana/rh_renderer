@@ -1,4 +1,5 @@
-from single_tile_renderer import AlphaTileRenderer
+from __future__ import print_function
+from .single_tile_renderer import AlphaTileRenderer
 import numpy as np
 from pyrtree import RTree,Rect
 
@@ -59,8 +60,9 @@ class MultipleTilesRenderer:
                 t = rtree_node.leaf_obj()
                 t_img, t_start_point, _ = t.crop(from_x, from_y, to_x, to_y)
                 if t_img is not None:
-                    res[t_start_point[1] - from_y: t_img.shape[0] + (t_start_point[1] - from_y),
-                        t_start_point[0] - from_x: t_img.shape[1] + (t_start_point[0] - from_x)] = t_img
+                    t_rel_point = np.array([int(round(t_start_point[0] - from_x)), int(round(t_start_point[1] - from_y))], dtype=int)
+                    res[t_rel_point[1]:t_rel_point[1] + t_img.shape[0],
+                        t_rel_point[0]:t_rel_point[0] + t_img.shape[1]] = t_img
 
         elif self.blend_type == 1: # Averaging
             # Do the calculation on a uint16 image (for overlapping areas), and convert to uint8 at the end
@@ -83,10 +85,11 @@ class MultipleTilesRenderer:
                 if t_img is not None:
                     t_mask, _, _ = AlphaTileRenderer(t).crop(
                         from_x, from_y, to_x, to_y)
-                    res[t_start_point[1] - from_y: t_img.shape[0] + (t_start_point[1] - from_y),
-                        t_start_point[0] - from_x: t_img.shape[1] + (t_start_point[0] - from_x)] += t_img.astype(res.dtype)
-                    res_mask[t_start_point[1] - from_y: t_img.shape[0] + (t_start_point[1] - from_y),
-                             t_start_point[0] - from_x: t_img.shape[1] + (t_start_point[0] - from_x)] += t_mask
+                    t_rel_point = np.array([int(round(t_start_point[0] - from_x)), int(round(t_start_point[1] - from_y))], dtype=int)
+                    res[t_rel_point[1]:t_rel_point[1] + t_img.shape[0],
+                        t_rel_point[0]:t_rel_point[0] + t_img.shape[1]] += t_img.astype(res.dtype)
+                    res_weights[t_rel_point[1]:t_rel_point[1] + t_img.shape[0],
+                                t_rel_point[0]:t_rel_point[0] + t_img.shape[1]] += t_mask
 
             # Change the values of 0 in the mask to 1, to avoid division by 0
             res_mask[res_mask == 0] = 1
@@ -109,12 +112,12 @@ class MultipleTilesRenderer:
                 t = rtree_node.leaf_obj()
                 t_img, t_start_point, t_weights = t.crop_with_distances(from_x, from_y, to_x, to_y)
                 if t_img is not None:
-                    print "actual image start_point:", t_start_point, "and shape:", t_img.shape
-                    res[t_start_point[1] - from_y: t_img.shape[0] + (t_start_point[1] - from_y),
-                        t_start_point[0] - from_x: t_img.shape[1] + (t_start_point[0] - from_x)] += \
-                        (t_img * t_weights).astype(res.dtype)
-                    res_weights[t_start_point[1] - from_y: t_img.shape[0] + (t_start_point[1] - from_y),
-                                t_start_point[0] - from_x: t_img.shape[1] + (t_start_point[0] - from_x)] += t_weights.astype(res_weights.dtype)
+                    print("actual image start_point:", t_start_point, "and shape:", t_img.shape)
+                    t_rel_point = np.array([int(round(t_start_point[0] - from_x)), int(round(t_start_point[1] - from_y))], dtype=int)
+                    res[t_rel_point[1]:t_rel_point[1] + t_img.shape[0],
+                        t_rel_point[0]:t_rel_point[0] + t_img.shape[1]] += (t_img * t_weights).astype(res.dtype)
+                    res_weights[t_rel_point[1]:t_rel_point[1] + t_img.shape[0],
+                                t_rel_point[0]:t_rel_point[0] + t_img.shape[1]] += t_weights.astype(res_weights.dtype)
 
             # Change the weights that are 0 to 1, to avoid division by 0
             res_weights[res_weights < 1] = 1

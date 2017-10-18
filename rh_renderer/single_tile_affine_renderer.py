@@ -42,7 +42,7 @@ class SingleTileAffineRenderer:
         if self.already_rendered:
             return self.img, np.array([self.bbox[0], self.bbox[1]])
 
-        img = cv2.imread(self.img_path, 0)
+        img = cv2.imread(self.img_path, cv2.IMREAD_ANYDEPTH)
         adjusted_transform = self.transform_matrix[:2].copy()
         adjusted_transform[0][2] -= self.bbox[0]
         adjusted_transform[1][2] -= self.bbox[2]
@@ -53,6 +53,7 @@ class SingleTileAffineRenderer:
             mask_img = np.ones(img.shape)
             self.mask = cv2.warpAffine(mask_img, adjusted_transform, self.shape, flags=cv2.INTER_AREA)
             self.mask[self.mask > 0] = 1
+            self.mask = self.mask.astype(np.uint8)
         if self.compute_distances:
             # The initial weights for each pixel is the minimum from the image boundary
             grid = np.mgrid[0:self.height, 0:self.width]
@@ -86,11 +87,11 @@ class SingleTileAffineRenderer:
         cropped_mask = None
         # Make sure the image was rendered
         self.render()
-        cropped_img = self.img[overlapping_area[2] - self.bbox[2]:overlapping_area[3] - self.bbox[2] + 1,
-                               overlapping_area[0] - self.bbox[0]:overlapping_area[1] - self.bbox[0] + 1]
+        cropped_img = self.img[int(overlapping_area[2] - self.bbox[2]):int(overlapping_area[3] - self.bbox[2] + 1),
+                               int(overlapping_area[0] - self.bbox[0]):int(overlapping_area[1] - self.bbox[0] + 1)]
         if self.compute_mask:
-            cropped_mask = self.mask[overlapping_area[2] - self.bbox[2]:overlapping_area[3] - self.bbox[2] + 1,
-                                     overlapping_area[0] - self.bbox[0]:overlapping_area[1] - self.bbox[0] + 1]
+            cropped_mask = self.mask[int(overlapping_area[2] - self.bbox[2]):int(overlapping_area[3] - self.bbox[2] + 1),
+                                     int(overlapping_area[0] - self.bbox[0]):int(overlapping_area[1] - self.bbox[0] + 1)]
         # Take only the parts that are overlapping
         return cropped_img, (overlapping_area[0], overlapping_area[2]), cropped_mask
 
@@ -109,12 +110,12 @@ class SingleTileAffineRenderer:
         cropped_distances = None
         # Make sure the image was rendered
         self.render()
-        cropped_img = self.img[overlapping_area[2] - self.bbox[2]:overlapping_area[3] - self.bbox[2] + 1,
-                               overlapping_area[0] - self.bbox[0]:overlapping_area[1] - self.bbox[0] + 1]
+        cropped_img = self.img[int(overlapping_area[2] - self.bbox[2]):int(overlapping_area[3] - self.bbox[2] + 1),
+                               int(overlapping_area[0] - self.bbox[0]):int(overlapping_area[1] - self.bbox[0] + 1)]
 
         if self.compute_distances:
-            cropped_distances = self.weights[overlapping_area[2] - self.bbox[2]:overlapping_area[3] - self.bbox[2] + 1,
-                                             overlapping_area[0] - self.bbox[0]:overlapping_area[1] - self.bbox[0] + 1]
+            cropped_distances = self.weights[int(overlapping_area[2] - self.bbox[2]):int(overlapping_area[3] - self.bbox[2] + 1),
+                                             int(overlapping_area[0] - self.bbox[0]):int(overlapping_area[1] - self.bbox[0] + 1)]
            
         # Take only the parts that are overlapping
         return cropped_img, (overlapping_area[0], overlapping_area[2]), cropped_distances

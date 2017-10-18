@@ -1,6 +1,6 @@
 # executes some functions from the points transform model
-from context import models
-from models import PointsTransformModel
+from __future__ import print_function
+from rh_renderer.models import PointsTransformModel
 import numpy as np
 
 def test_to_modelspec():
@@ -20,6 +20,6 @@ def test_to_modelspec():
     
 
 if __name__ == '__main__':
-    print "test_to_modelspec:", test_to_modelspec()
+    print("test_to_modelspec:", test_to_modelspec())
 
 
