@@ -283,13 +283,20 @@ class SingleTileStaticRenderer(SingleTileRendererBase):
                  bbox=None,
                  transformation_models=[],
                  compute_mask=False, 
-                 compute_distances=True):
+                 compute_distances=True,
+                 hist_adjuster=None):
         super(SingleTileStaticRenderer, self).__init__(
             width, height, bbox, transformation_models, compute_mask, compute_distances)
         self.img_path = img_path
+        self.hist_adjuster = hist_adjuster
         
     def load(self):
-        return cv2.imread(self.img_path, cv2.IMREAD_ANYDEPTH)
+        img = cv2.imread(self.img_path, cv2.IMREAD_ANYDEPTH)
+        # Normalize the histogram if needed
+        if self.hist_adjuster is not None:
+            img = self.hist_adjuster.adjust_histogram(self.img_path, img)
+
+        return img
 
 class SingleTileRenderer(SingleTileDynamicRendererBase):
     '''Implementation of SingleTileRendererBase with file path for dynamic (new transformations can be applied) images'''
@@ -298,13 +305,20 @@ class SingleTileRenderer(SingleTileDynamicRendererBase):
                  bbox=None,
                  transformation_models=[],
                  compute_mask=False, 
-                 compute_distances=True):
+                 compute_distances=True,
+                 hist_adjuster=None):
         super(SingleTileRenderer, self).__init__(
             width, height, bbox, transformation_models, compute_mask, compute_distances)
         self.img_path = img_path
+        self.hist_adjuster = hist_adjuster
         
     def load(self):
-        return cv2.imread(self.img_path, cv2.IMREAD_ANYDEPTH)
+        img = cv2.imread(self.img_path, cv2.IMREAD_ANYDEPTH)
+        # Normalize the histogram if needed
+        if self.hist_adjuster is not None:
+            img = self.hist_adjuster.adjust_histogram(self.img_path, img)
+
+        return img
 
 
 

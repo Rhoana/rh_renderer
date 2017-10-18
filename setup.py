@@ -19,6 +19,7 @@ setup(
     install_requires=[
         "numpy>=1.9.3",
         "scipy>=0.16.0",
+        "scikit-image>=0.13.1",
     ],
     dependency_links = ['http://github.com/Rhoana/pyrtree/tarball/master#egg=pyrtree-0.5'],
     zip_safe=False

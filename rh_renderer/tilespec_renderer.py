@@ -8,9 +8,9 @@ from . import models
 
 class TilespecRenderer:
 
-    def __init__(self, tilespec, dtype=np.uint8):
+    def __init__(self, tilespec, dtype=np.uint8, hist_adjuster=None):
         self.single_tiles = [SingleTileRenderer(
-                                tile_ts["mipmapLevels"]["0"]["imageUrl"].replace("file://", ""), tile_ts["width"], tile_ts["height"], compute_distances=True)
+                                tile_ts["mipmapLevels"]["0"]["imageUrl"].replace("file://", ""), tile_ts["width"], tile_ts["height"], compute_distances=True, hist_adjuster=hist_adjuster)
                             for tile_ts in tilespec]
         # Add the corresponding transformation
         for tile_ts, tile in zip(tilespec, self.single_tiles):
