@@ -31,7 +31,7 @@ class SingleTileRendererBase(object):
             self.bbox = [0, width - 1, 0, height - 1]
             self.shape = (width, height)
         else:
-            self.bbox = bbox
+            self.bbox = np.around(bbox).astype(int)
             self.shape = (self.bbox[1] - self.bbox[0] + 1, self.bbox[3] - self.bbox[2] + 1)
 
         self.start_point = (self.bbox[0], self.bbox[2]) # If only affine is used then this is always (bbox[0], bbox[2]), with non-affine it might be different
@@ -81,9 +81,9 @@ class SingleTileRendererBase(object):
         if self.already_rendered:
             return self.img, self.start_point
 
-        #st_time = time.time()
+        st_time = time.time()
         img = self.load()
-        #print "loading image time: {}".format(time.time() - st_time)
+        print("loading image time: {}".format(time.time() - st_time))
         self.start_point = np.array([self.bbox[0], self.bbox[2]]) # may be different for non-affine result
 
         if self.non_affine_transform is None:
@@ -108,6 +108,7 @@ class SingleTileRendererBase(object):
                 self.weights = cv2.warpAffine(weights_img, adjusted_transform, self.shape, flags=cv2.INTER_AREA)
 
         else:
+            st_time = time.time()
             # Apply a reverse pre affine transformation on the source points of the non-affine transformation,
             # and a post affine transformation on the destination points
             src_points, dest_points = self.non_affine_transform.get_point_map()
@@ -121,11 +122,15 @@ class SingleTileRendererBase(object):
             # Set the target grid using the shape
             out_grid_x, out_grid_y = np.mgrid[0:self.shape[0], 0:self.shape[1]]
 
+            print("  non-affine render pre_grid creation time: {}".format(time.time() - st_time))
+            st_time = time.time()
             # TODO - is there a way to further restrict the target grid size, and speed up the interpolation?
             # Use griddata to interpolate all the destination points
-            #out_grid_z = spint.griddata(dest_points, src_points, (out_grid_x, out_grid_y), method='linear', fill_value=-1.)
-            out_grid_z = spint.griddata(dest_points, src_points, (out_grid_x, out_grid_y), method='cubic', fill_value=-1.)
+            out_grid_z = spint.griddata(dest_points, src_points, (out_grid_x, out_grid_y), method='linear', fill_value=-1.)
+            #out_grid_z = spint.griddata(dest_points, src_points, (out_grid_x, out_grid_y), method='cubic', fill_value=-1.)
 
+            print("  non-affine render out_grid_z creation time: {}".format(time.time() - st_time))
+            st_time = time.time()
             map_x = np.append([], [ar[:,0] for ar in out_grid_z]).reshape(self.shape[0], self.shape[1]).astype('float32')
             map_y = np.append([], [ar[:,1] for ar in out_grid_z]).reshape(self.shape[0], self.shape[1]).astype('float32')
             # find all rows and columns that are mapped before or after the boundaries of the source image, and remove them
@@ -134,11 +139,15 @@ class SingleTileRendererBase(object):
             max_col_row = np.max(map_valid_cells, axis=1)
             map_x = map_x[min_col_row[0]:max_col_row[0], min_col_row[1]:max_col_row[1]]
             map_y = map_y[min_col_row[0]:max_col_row[0], min_col_row[1]:max_col_row[1]]
+            print("  non-affine render maps creation time: {}".format(time.time() - st_time))
+            st_time = time.time()
 
             # remap the source points to the destination points
             self.img = cv2.remap(img, map_x, map_y, cv2.INTER_CUBIC).T
             self.start_point = self.start_point + min_col_row
 
+            print("  non-affine render remap time: {}".format(time.time() - st_time))
+            st_time = time.time()
             # Add mask and weights computation
             if self.compute_mask:
                 mask_img = np.ones(img.shape)
@@ -155,6 +164,7 @@ class SingleTileRendererBase(object):
                 self.weights = cv2.remap(weights_img, map_x, map_y, cv2.INTER_CUBIC).T
                 self.weights[self.weights < 0] = 0
 
+            print("  non-affine render mask creation time: {}".format(time.time() - st_time))
 
 
         self.already_rendered = True
@@ -171,12 +181,14 @@ class SingleTileRendererBase(object):
     def crop(self, from_x, from_y, to_x, to_y):
         """Returns the cropped image, its starting point, and the cropped mask (if the mask was computed).
            The given coordinates are specified using world coordinates."""
+        print("!!crop called with from_xy: {},{} to_xy: {},{}".format(from_x, from_y, to_x, to_y))
         # find the overlapping area of the given coordinates and the transformed tile
         overlapping_area = [max(from_x, self.bbox[0]), min(to_x, self.bbox[1]), max(from_y, self.bbox[2]), min(to_y, self.bbox[3])]
         overlapping_width = overlapping_area[1] - overlapping_area[0] + 1
         overlapping_height = overlapping_area[3] - overlapping_area[2] + 1
         if overlapping_width <= 0 or overlapping_height <= 0:
             # No overlap between the area and the tile
+            print("overlapping area is empty: width:{}, height:{}".format(overlapping_width, overlapping_height))
             return None, None, None
 
         cropped_mask = None
