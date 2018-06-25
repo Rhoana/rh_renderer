@@ -1,6 +1,6 @@
 from single_tile_affine_renderer import SingleTileAffineRenderer
 import numpy as np
-from pyrtree import RTree,Rect
+import tinyr
 
 
 class MultipleTilesAffineRenderer:
@@ -14,11 +14,11 @@ class MultipleTilesAffineRenderer:
         self.blend_type = self.BLEND_TYPE[blend_type]
         self.single_tiles = single_tiles
         # Create an RTree of the bounding boxes of the tiles
-        self.rtree = RTree()
+        self.rtree = tinyr.RTree(interleaved=True, max_cap=5, min_cap=2)
         for t in self.single_tiles:
             bbox = t.get_bbox()
-            # pyrtree uses the (x_min, y_min, x_max, y_max) notation
-            self.rtree.insert(t, Rect(bbox[0], bbox[2], bbox[1], bbox[3]))
+            # using the (x_min, y_min, x_max, y_max) notation
+            self.rtree.insert(t, (bbox[0], bbox[2], bbox[1], bbox[3]))
         #should_compute_mask = False if self.blend_type == 0 else True
         #self.single_tiles = [SingleTileAffineRenderer(img_path, img_shape[1], img_shape[0], compute_mask=should_compute_mask) for img_path, img_shape in zip(img_paths, img_shapes)]
         #for i, matrix in enumerate(transform_matrices):
@@ -26,12 +26,12 @@ class MultipleTilesAffineRenderer:
 
     def add_transformation(self, transform_matrix):
         """Adds a transformation to all tiles"""
-        self.rtree = RTree()
+        self.rtree = tinyr.RTree(interleaved=True, max_cap=5, min_cap=2)
         for single_tile in self.single_tiles:
             single_tile.add_transformation(transform_matrix)
             bbox = single_tile.get_bbox()
-            # pyrtree uses the (x_min, y_min, x_max, y_max) notation
-            self.rtree.insert(single_tile, Rect(bbox[0], bbox[2], bbox[1], bbox[3]))
+            # using the (x_min, y_min, x_max, y_max) notation
+            self.rtree.insert(single_tile, (bbox[0], bbox[2], bbox[1], bbox[3]))
         
     def render(self):
         if len(self.single_tiles) == 0:
@@ -52,11 +52,8 @@ class MultipleTilesAffineRenderer:
             res = np.zeros((int(round(to_y + 1 - from_y)), int(round(to_x + 1 - from_x))), dtype=np.uint8)
             # render only relevant parts, and stitch them together
             # filter only relevant tiles using rtree
-            rect_res = self.rtree.query_rect( Rect(from_x, from_y, to_x, to_y) )
-            for rtree_node in rect_res:
-                if not rtree_node.is_leaf():
-                    continue
-                t = rtree_node.leaf_obj()
+            rect_res = self.rtree.search( (from_x, from_y, to_x, to_y) )
+            for t in rect_res:
                 t_img, t_start_point, _ = t.crop(from_x, from_y, to_x, to_y)
                 if t_img is not None:
                     t_rel_point = np.array([int(round(t_start_point[0] - from_x)), int(round(t_start_point[1] - from_y))], dtype=int)
@@ -70,11 +67,8 @@ class MultipleTilesAffineRenderer:
 
             # render only relevant parts, and stitch them together
             # filter only relevant tiles using rtree
-            rect_res = self.rtree.query_rect( Rect(from_x, from_y, to_x, to_y) )
-            for rtree_node in rect_res:
-                if not rtree_node.is_leaf():
-                    continue
-                t = rtree_node.leaf_obj()
+            rect_res = self.rtree.search( (from_x, from_y, to_x, to_y) )
+            for t in rect_res:
                 t_img, t_start_point, t_mask = t.crop(from_x, from_y, to_x, to_y)
                 if t_img is not None:
                     t_rel_point = np.array([int(round(t_start_point[0] - from_x)), int(round(t_start_point[1] - from_y))], dtype=int)
@@ -97,11 +91,8 @@ class MultipleTilesAffineRenderer:
 
             # render only relevant parts, and stitch them together
             # filter only relevant tiles using rtree
-            rect_res = self.rtree.query_rect( Rect(from_x, from_y, to_x, to_y) )
-            for rtree_node in rect_res:
-                if not rtree_node.is_leaf():
-                    continue
-                t = rtree_node.leaf_obj()
+            rect_res = self.rtree.search( (from_x, from_y, to_x, to_y) )
+            for t in rect_res:
                 t_img, t_start_point, t_weights = t.crop_with_distances(from_x, from_y, to_x, to_y)
                 if t_img is not None:
                     t_rel_point = np.array([int(round(t_start_point[0] - from_x)), int(round(t_start_point[1] - from_y))], dtype=int)
