@@ -1,6 +1,6 @@
 import sys
 #import os
-#import cv2
+import cv2
 import numpy as np
 #import ujson as json
 import cPickle as pickle
@@ -16,6 +16,16 @@ class HistogramCLAHE(object):
         img1_equ = ((skimage.exposure.equalize_adapthist(img)) * 255).astype(np.uint8)
         return img1_equ
 
+
+class HistogramGB11CLAHE(object):
+
+    def __init__(self):
+        pass
+
+    def adjust_histogram(self, img_path, img):
+        img = cv2.GaussianBlur(img, (11,11), 0)
+        img1_equ = ((skimage.exposure.equalize_adapthist(img)) * 255).astype(np.uint8)
+        return img1_equ
 
 
 if __name__ == '__main__':
