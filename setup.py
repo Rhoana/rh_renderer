@@ -5,7 +5,7 @@ from setuptools.extension import Extension
 from Cython.Build import cythonize
 import subprocess
 
-VERSION = '0.0.3'
+VERSION = '0.0.4'
 
 README = open('README.md').read()
 
@@ -22,7 +22,10 @@ for flag in flags.split():
 EXTENSIONS = [
         Extension(
                   "rh_renderer/blender/images_composer",
-                  ["rh_renderer/blender/images_composer.pyx", "rh_renderer/blender/ImagesComposer.cpp"],
+                  ["rh_renderer/blender/images_composer.pyx", "rh_renderer/blender/ImagesComposer.cpp",
+                   "rh_renderer/blender/images_composer.pyx", "rh_renderer/blender/detail/seam_finders.cpp",
+                   "rh_renderer/blender/images_composer.pyx", "rh_renderer/blender/detail/exposure_compensate.cpp",
+                   "rh_renderer/blender/images_composer.pyx", "rh_renderer/blender/detail/blenders.cpp"],
                   language="c++",
                   include_dirs=include_dirs_list,
                   extra_compile_args=['-O3', '--verbose'],
@@ -45,6 +48,6 @@ setup(
         "scipy>=0.16.0",
         "Cython>=0.23.3",
     ],
-    dependency_links = ['http://github.com/Rhoana/pyrtree/tarball/master#egg=pyrtree-0.5'],
+    dependency_links = ['http://github.com/Rhoana/tinyr/tarball/master#egg=tinyr-0.1'],
     zip_safe=False
 )

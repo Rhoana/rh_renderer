@@ -20,7 +20,7 @@ for flag in flags.split():
 def make_ext(modname, pyxfilename):
     from distutils.extension import Extension
     return Extension(name=modname,
-                     sources=[pyxfilename, 'ImagesComposer.cpp'],
+                     sources=[pyxfilename, 'ImagesComposer.cpp', 'detail/seam_finders.cpp', 'detail/exposure_compensate.cpp', 'detail/blenders.cpp'],
                      language="c++",
                      include_dirs=include_dirs_list,
                      extra_compile_args=['-O3', '--verbose'],

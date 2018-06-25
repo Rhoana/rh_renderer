@@ -9,22 +9,25 @@
 #include <opencv2/stitching/warpers.hpp>
 //#include <opencv2/stitching/detail/matchers.hpp>
 #include <opencv2/stitching/detail/motion_estimators.hpp>
-#include <opencv2/stitching/detail/exposure_compensate.hpp>
-#include <opencv2/stitching/detail/seam_finders.hpp>
-#include <opencv2/stitching/detail/blenders.hpp>
+//#include <opencv2/stitching/detail/exposure_compensate.hpp>
+#include "detail/exposure_compensate.hpp"
+//#include <opencv2/stitching/detail/seam_finders.hpp>
+#include "detail/seam_finders.hpp"
+//#include <opencv2/stitching/detail/blenders.hpp>
+#include "detail/blenders.hpp"
 //#include <opencv2/stitching/detail/camera.hpp>
 
 using namespace cv;
 
-/*
+
 #define CV_INSTRUMENT_REGION()
 //#define LOGLN(x)
 #define LOGLN(x) std::cout << x << std::endl;
 #define ENABLE_LOG 1
 #define LOG(x)
-*/
 
-void convertToRGBImages(std::vector<Mat> &images)
+
+void convertToRGBImages(std::vector<UMat> &images)
 {
     for (size_t i = 0; i < images.size(); i++)
     {
@@ -47,28 +50,31 @@ int ImagesComposer::compose_panorama(
     double compose_resol_ = 1;
     double work_scale_ = 1;
     //double seam_work_aspect_ = 1;
-    Ptr<detail::SeamFinder> seam_finder_(makePtr<detail::GraphCutSeamFinder>(detail::GraphCutSeamFinderBase::COST_COLOR));
+    ///Ptr<detail::SeamFinder> seam_finder_(makePtr<detail::GraphCutSeamFinder>(detail::GraphCutSeamFinderBase::COST_COLOR));
+    Ptr<detail::SeamFinder> seam_finder_(makePtr<detail::RhoanaGraphCutSeamFinder>(detail::RhoanaGraphCutSeamFinderBase::COST_COLOR));
     //Ptr<detail::SeamFinder> seam_finder_(makePtr<detail::GraphCutSeamFinder>(detail::GraphCutSeamFinderBase::COST_COLOR_GRAD));
-    Ptr<detail::ExposureCompensator> exposure_comp_(makePtr<detail::BlocksGainCompensator>());
+    ///Ptr<detail::ExposureCompensator> exposure_comp_(makePtr<detail::BlocksGainCompensator>());
+    Ptr<detail::ExposureCompensator> exposure_comp_(makePtr<detail::RhoanaGainCompensator>());
     //Ptr<detail::ExposureCompensator> exposure_comp_(makePtr<detail::GainCompensator>());
     //Ptr<detail::ExposureCompensator> exposure_comp_(makePtr<detail::NoExposureCompensator>());
-    Ptr<detail::Blender> blender_(makePtr<detail::MultiBandBlender>(false));
+    ///Ptr<detail::Blender> blender_(makePtr<detail::MultiBandBlender>(false));
+    Ptr<detail::RhoanaBlender> blender_(makePtr<detail::RhoanaMultiBandBlender>(false));
     //Ptr<detail::Blender> blender_(makePtr<detail::FeatherBlender>());
     //Ptr<detail::Blender> blender_(makePtr<detail::Blender>());
 
-    std::vector<Mat> warped_images;
-    std::vector<Mat> warped_masks;
+    std::vector<UMat> warped_images;
+    std::vector<UMat> warped_masks;
     //std::vector<Point> warped_corners;
-    std::vector<Mat> warped_seams_images;
-    std::vector<Mat> warped_seams_masks;
+    std::vector<UMat> warped_seams_images;
+    std::vector<UMat> warped_seams_masks;
     //std::vector<Point> warped_seams_corners;
 
-    in_warped_images.getMatVector(warped_images);
-    convertToRGBImages(warped_images);
-    in_warped_masks.getMatVector(warped_masks);
-    in_warped_seams_images.getMatVector(warped_seams_images);
-    convertToRGBImages(warped_seams_images);
-    in_warped_seams_masks.getMatVector(warped_seams_masks);
+    in_warped_images.getUMatVector(warped_images);
+    ///convertToRGBImages(warped_images);
+    in_warped_masks.getUMatVector(warped_masks);
+    in_warped_seams_images.getUMatVector(warped_seams_images);
+    ///convertToRGBImages(warped_seams_images);
+    in_warped_seams_masks.getUMatVector(warped_seams_masks);
 
     std::vector<Size> warped_sizes(warped_images.size());
 
@@ -109,7 +115,7 @@ int ImagesComposer::compose_panorama(
     LOGLN("Detecting seams")
 
     // Find seams
-    std::vector<Mat> warped_seams_images_f(warped_seams_images.size());
+    std::vector<UMat> warped_seams_images_f(warped_seams_images.size());
     for (size_t i = 0; i < warped_seams_images.size(); ++i)
         warped_seams_images[i].convertTo(warped_seams_images_f[i], CV_32F);
     seam_finder_->find(warped_seams_images_f, warped_seams_corners, warped_seams_masks);
@@ -128,8 +134,8 @@ int ImagesComposer::compose_panorama(
     int64 t = getTickCount();
 #endif
 
-    Mat img_warped, img_warped_s;
-    Mat dilated_mask, seam_mask, mask, mask_warped;
+    UMat img_warped, img_warped_s;
+    UMat dilated_mask, seam_mask, mask, mask_warped;
 
     double compose_work_aspect = 1;
     bool is_blender_prepared = false;
@@ -144,9 +150,10 @@ int ImagesComposer::compose_panorama(
     //compose_seam_aspect = compose_scale / seam_scale_;
     compose_work_aspect = compose_scale / work_scale_;
 
-    Mat full_img, img;
+    UMat full_img, img;
     for (size_t img_idx = 0; img_idx < warped_images.size(); ++img_idx)
     {
+        LOGLN("Compositing image #" << img_idx + 1);
 #if ENABLE_LOG
         int64 compositing_t = getTickCount();
 #endif
@@ -165,7 +172,7 @@ int ImagesComposer::compose_panorama(
         warped_images[img_idx].convertTo(img_warped_s, CV_16S);
 
         // Make sure seam mask has proper size
-        dilate(warped_seams_masks[img_idx], dilated_mask, Mat());
+        dilate(warped_seams_masks[img_idx], dilated_mask, UMat());
         resize(dilated_mask, seam_mask, warped_masks[img_idx].size());
 
         bitwise_and(seam_mask, warped_masks[img_idx], warped_masks[img_idx]);
@@ -198,7 +205,7 @@ int ImagesComposer::compose_panorama(
 #if ENABLE_LOG
     int64 blend_t = getTickCount();
 #endif
-    Mat result, result_mask;
+    UMat result, result_mask;
     blender_->blend(result, result_mask);
     LOGLN("blend time: " << ((getTickCount() - blend_t) / getTickFrequency()) << " sec");
 
@@ -210,7 +217,7 @@ int ImagesComposer::compose_panorama(
     // so convert it to avoid user confusing
     //result.convertTo(pano, CV_8U);
     result.convertTo(pano, CV_8U);
-    cvtColor(pano, pano, CV_RGB2GRAY);
+    ///cvtColor(pano, pano, CV_RGB2GRAY);
 
     return 0;
 }
