@@ -1,11 +1,9 @@
 # Allows rendering a given tilespec
-from multiple_tiles_affine_renderer import MultipleTilesAffineRenderer
-from single_tile_affine_renderer import SingleTileAffineRenderer
+from .multiple_tiles_affine_renderer import MultipleTilesAffineRenderer
+from .single_tile_affine_renderer import SingleTileAffineRenderer
 import json
 import numpy as np
-import sys
-sys.path.append('../')
-import models
+from . import models
 
 
 class TilespecAffineRenderer:

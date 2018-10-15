@@ -40,4 +40,3 @@ if __name__ == '__main__':
         pickle.dump(clahe, out_f, pickle.HIGHEST_PROTOCOL)
 
     
-

@@ -1,7 +1,7 @@
+from __future__ import print_function
 import pylab
-from context import single_tile_affine_renderer, multiple_tiles_affine_renderer
-from multiple_tiles_affine_renderer import MultipleTilesAffineRenderer
-from single_tile_affine_renderer import SingleTileAffineRenderer
+from rh_renderer.multiple_tiles_affine_renderer import MultipleTilesAffineRenderer
+from rh_renderer.single_tile_affine_renderer import SingleTileAffineRenderer
 import math
 import numpy as np
 import time
@@ -51,20 +51,20 @@ if __name__ == '__main__':
 
     start_time = time.time()
     img1, start_point1 = renderer1.render()
-    print "NO_BLENDING Before transformations: Start point is at:", start_point1, "image shape:", img1.shape, "took: {} seconds".format(time.time() - start_time)
+    print("NO_BLENDING Before transformations: Start point is at:", start_point1, "image shape:", img1.shape, "took: {} seconds".format(time.time() - start_time))
     pylab.figure()
     pylab.imshow(img1, cmap='gray', vmin=0., vmax=255.)
 
 
     start_time = time.time()
     img2, start_point2 = renderer2.render()
-    print "AVERAGING Before transformations: Start point is at:", start_point2, "image shape:", img2.shape, "took: {} seconds".format(time.time() - start_time)
+    print("AVERAGING Before transformations: Start point is at:", start_point2, "image shape:", img2.shape, "took: {} seconds".format(time.time() - start_time))
     pylab.figure()
     pylab.imshow(img2, cmap='gray', vmin=0., vmax=255.)
 
     start_time = time.time()
     img3, start_point3 = renderer3.render()
-    print "LINEAR Before transformations: Start point is at:", start_point3, "image shape:", img3.shape, "took: {} seconds".format(time.time() - start_time)
+    print("LINEAR Before transformations: Start point is at:", start_point3, "image shape:", img3.shape, "took: {} seconds".format(time.time() - start_time))
     pylab.figure()
     pylab.imshow(img3, cmap='gray', vmin=0., vmax=255.)
 

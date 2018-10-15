@@ -42,7 +42,7 @@ class SingleTileAffineRenderer:
         if self.already_rendered:
             return self.img, np.array([self.bbox[0], self.bbox[1]])
 
-        img = cv2.imread(self.img_path, 0)
+        img = cv2.imread(self.img_path, cv2.IMREAD_ANYDEPTH)
         adjusted_transform = self.transform_matrix[:2].copy()
         adjusted_transform[0][2] -= self.bbox[0]
         adjusted_transform[1][2] -= self.bbox[2]

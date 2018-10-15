@@ -47,6 +47,7 @@ setup(
         "numpy>=1.9.3",
         "scipy>=0.16.0",
         "Cython>=0.23.3",
+        "scikit-image>=0.13.1",
     ],
     dependency_links = ['http://github.com/Rhoana/tinyr/tarball/master#egg=tinyr-0.1'],
     zip_safe=False

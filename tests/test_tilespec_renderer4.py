@@ -1,4 +1,4 @@
-# Renders a given tilespec in 1/4 resolution
+# Renders a given tilespec as is in full resolution
 from __future__ import print_function
 import pylab
 from rh_renderer.tilespec_renderer import TilespecRenderer
@@ -6,6 +6,7 @@ import numpy as np
 import time
 import json
 from rh_renderer import models
+from rh_renderer.normalization.histogram_clahe import HistogramCLAHE
 
 
 if __name__ == '__main__':
@@ -15,15 +16,8 @@ if __name__ == '__main__':
 
 
     # Create the tilespec renderer
-    renderer1 = TilespecRenderer(tilespec)
+    renderer1 = TilespecRenderer(tilespec, hist_adjuster=HistogramCLAHE())
 
-    downsample = models.AffineModel(np.array([
-                                              [0.25, 0., 0.],
-                                              [0., 0.25, 0.],
-                                              [0., 0., 1.]
-                                             ]))
-
-    renderer1.add_transformation(downsample)
 
     start_time = time.time()
     img1, start_point1 = renderer1.render()

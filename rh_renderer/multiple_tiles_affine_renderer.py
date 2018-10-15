@@ -1,4 +1,4 @@
-from single_tile_affine_renderer import SingleTileAffineRenderer
+from .single_tile_affine_renderer import SingleTileAffineRenderer
 import numpy as np
 import tinyr
 
@@ -9,6 +9,7 @@ class MultipleTilesAffineRenderer:
             "AVERAGING" : 1,
             "LINEAR" : 2
         }
+
     def __init__(self, single_tiles, blend_type="NO_BLENDING"):
         """Receives a number of image paths, and for each a transformation matrix"""
         self.blend_type = self.BLEND_TYPE[blend_type]
@@ -74,7 +75,7 @@ class MultipleTilesAffineRenderer:
                     t_rel_point = np.array([int(round(t_start_point[0] - from_x)), int(round(t_start_point[1] - from_y))], dtype=int)
                     res[t_rel_point[1]:t_rel_point[1] + t_img.shape[0],
                         t_rel_point[0]:t_rel_point[0] + t_img.shape[1]] += t_img
-                    res_weights[t_rel_point[1]:t_rel_point[1] + t_img.shape[0],
+                    res_mask[t_rel_point[1]:t_rel_point[1] + t_img.shape[0],
                                 t_rel_point[0]:t_rel_point[0] + t_img.shape[1]] += t_mask
 
             # Change the values of 0 in the mask to 1, to avoid division by 0

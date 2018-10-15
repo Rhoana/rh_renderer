@@ -1,8 +1,8 @@
 # Takes a single tile and applies some transformations on it
+from __future__ import print_function
 import pylab
-from context import single_tile_renderer
-from single_tile_renderer import SingleTileRenderer
-import models
+from rh_renderer.single_tile_renderer import SingleTileRenderer
+from rh_renderer import models
 import numpy as np
 
 if __name__ == '__main__':
@@ -10,7 +10,7 @@ if __name__ == '__main__':
     renderer = SingleTileRenderer(tile_fname, 3348, 2976, compute_mask=False, compute_distances=False)
 
     img, start_point = renderer.render()
-    print "Before transformations: Start point is at:", start_point, "image shape:", img.shape
+    print("Before transformations: Start point is at:", start_point, "image shape:", img.shape)
     pylab.figure()
     pylab.imshow(img, cmap='gray', vmin=0., vmax=255.)
 
@@ -27,12 +27,12 @@ if __name__ == '__main__':
     # Add the transformations and render the result
     transforms = [transform1, transform2, transform3] 
     for t in transforms:
-        print "Adding transformation:", t
+        print("Adding transformation:", t)
         renderer.add_transformation(t)
 
     img, start_point = renderer.render()
 
-    print "Start point is at:", start_point, "image shape:", img.shape
+    print("Start point is at:", start_point, "image shape:", img.shape)
     pylab.figure()
     pylab.imshow(img, cmap='gray', vmin=0., vmax=255.)
 

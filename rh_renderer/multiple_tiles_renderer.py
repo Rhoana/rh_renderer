@@ -1,4 +1,5 @@
-from single_tile_renderer import AlphaTileRenderer
+from __future__ import print_function
+from .single_tile_renderer import AlphaTileRenderer
 import numpy as np
 import tinyr
 import cv2
@@ -16,12 +17,19 @@ class BlendType(Enum):
     MULTI_BAND_SEAM = 3
 
 class MultipleTilesRenderer:
-    def __init__(self, single_tiles, blend_type=BlendType.NO_BLENDING):
+    BLEND_TYPE = {
+            "NO_BLENDING" : 0,
+            "AVERAGING" : 1,
+            "LINEAR" : 2
+        }
+
+    def __init__(self, single_tiles, blend_type=BlendType.NO_BLENDING, dtype=np.uint8):
         """Receives a number of image paths, and for each a transformation matrix"""
         self.blend_type = blend_type
         self.single_tiles = single_tiles
         # Create an RTree of the bounding boxes of the tiles
         self.rtree = tinyr.RTree(interleaved=True, max_cap=5, min_cap=2)
+        self.dtype = dtype
         for t in self.single_tiles:
             bbox = t.get_bbox()
             # using the (x_min, y_min, x_max, y_max) notation
@@ -57,7 +65,7 @@ class MultipleTilesRenderer:
 
         # Distinguish between the different types of blending
         if self.blend_type == BlendType.NO_BLENDING: # No blending
-            res = np.zeros((round(to_y + 1 - from_y), round(to_x + 1 - from_x)), dtype=np.uint8)
+            res = np.zeros((round(to_y + 1 - from_y), round(to_x + 1 - from_x)), dtype=self.dtype)
             # render only relevant parts, and stitch them together
             # filter only relevant tiles using rtree
             rect_res = self.rtree.search( (from_x, from_y, to_x, to_y) )
@@ -94,7 +102,7 @@ class MultipleTilesRenderer:
             # Change the values of 0 in the mask to 1, to avoid division by 0
             res_mask[res_mask == 0] = 1
             res = res / res_mask
-            res = np.maximum(0, np.minimum(255, res)).astype(np.uint8)
+            res = np.maximum(0, np.minimum(np.iinfo(self.dtype).max, res)).astype(self.dtype)
 
         elif self.blend_type == BlendType.LINEAR: # Linear averaging
             # Do the calculation on a uint32 image (for overlapping areas), and convert to uint8 at the end
@@ -109,17 +117,17 @@ class MultipleTilesRenderer:
             for t in rect_res:
                 t_img, t_start_point, t_weights = t.crop_with_distances(from_x, from_y, to_x, to_y)
                 if t_img is not None:
-                    print "actual image start_point:", t_start_point, "and shape:", t_img.shape
+                    print("actual image start_point:", t_start_point, "and shape:", t_img.shape)
                     t_rel_point = np.array([int(round(t_start_point[0] - from_x)), int(round(t_start_point[1] - from_y))], dtype=int)
                     res[t_rel_point[1]:t_rel_point[1] + t_img.shape[0],
-                        t_rel_point[0]:t_rel_point[0] + t_img.shape[1]] += (t_img * t_weights).astype(np.uint32)
+                        t_rel_point[0]:t_rel_point[0] + t_img.shape[1]] += (t_img * t_weights).astype(res.dtype)
                     res_weights[t_rel_point[1]:t_rel_point[1] + t_img.shape[0],
-                                t_rel_point[0]:t_rel_point[0] + t_img.shape[1]] += t_weights.astype(np.uint16)
+                                t_rel_point[0]:t_rel_point[0] + t_img.shape[1]] += t_weights.astype(res_weights.dtype)
 
             # Change the weights that are 0 to 1, to avoid division by 0
             res_weights[res_weights < 1] = 1
             res = res / res_weights
-            res = np.maximum(0, np.minimum(255, res)).astype(np.uint8)
+            res = np.maximum(0, np.minimum(np.iinfo(self.dtype).max, res)).astype(self.dtype)
 
         elif self.blend_type == BlendType.MULTI_BAND_SEAM: # multi-band with seam blending
 
@@ -203,7 +211,7 @@ class MultipleTilesRenderer:
             images_seams_masks = None
             images_seams_corners = None
 
-            res = np.zeros((int(round(to_y + 1 - from_y)), int(round(to_x + 1 - from_x))), dtype=np.uint8)
+            res = np.zeros((int(round(to_y + 1 - from_y)), int(round(to_x + 1 - from_x))), dtype=self.dtype)
             if create_panorama:
                 res[min_rel_xy[1]:min_rel_xy[1] + non_padded_res.shape[0],
                     min_rel_xy[0]:min_rel_xy[0] + non_padded_res.shape[1]] = non_padded_res

@@ -1,6 +1,6 @@
+from __future__ import print_function
 import pylab
-from context import single_tile_affine_renderer
-from single_tile_affine_renderer import SingleTileAffineRenderer
+from rh_renderer.single_tile_affine_renderer import SingleTileAffineRenderer
 import math
 import numpy as np
 
@@ -8,7 +8,7 @@ if __name__ == '__main__':
     renderer = SingleTileAffineRenderer('images/tile1.bmp', 3348, 2976, compute_mask=True)
 
     img, start_point = renderer.render()
-    print "Before transformations: Start point is at:", start_point, "image shape:", img.shape
+    print("Before transformations: Start point is at:", start_point, "image shape:", img.shape)
     pylab.figure()
     pylab.imshow(img, cmap='gray', vmin=0., vmax=255.)
 
@@ -17,11 +17,11 @@ if __name__ == '__main__':
 
     transforms = [transform_45] * 4
     for t in transforms:
-        print "Adding transformation:", t
+        print("Adding transformation:", t)
         renderer.add_transformation(t)
         img, start_point = renderer.render()
 
-        print "Start point is at:", start_point, "image shape:", img.shape
+        print("Start point is at:", start_point, "image shape:", img.shape)
         pylab.figure()
         pylab.imshow(img, cmap='gray', vmin=0., vmax=255.)
 
@@ -31,7 +31,7 @@ if __name__ == '__main__':
         from_y = (bbox[2] + bbox[3]) / 2.0 - 500
         to_y = from_y + 1000
         cropped_img, start_point, _ = renderer.crop(from_x, from_y, to_x, to_y)
-        print "cropped Start point is at:", start_point, "image shape:", cropped_img.shape
+        print("cropped Start point is at:", start_point, "image shape:", cropped_img.shape)
         pylab.figure()
         pylab.imshow(cropped_img, cmap='gray', vmin=0., vmax=255.)
         

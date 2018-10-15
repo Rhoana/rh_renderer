@@ -305,7 +305,7 @@ class SingleTileStaticRenderer(SingleTileRendererBase):
         self.hist_adjuster = hist_adjuster
         
     def load(self):
-        img = cv2.imread(self.img_path, 0)
+        img = cv2.imread(self.img_path, cv2.IMREAD_ANYDEPTH)
         # Normalize the histogram if needed
         if self.hist_adjuster is not None:
             #img = cv2.equalizeHist(img)
@@ -314,7 +314,6 @@ class SingleTileStaticRenderer(SingleTileRendererBase):
             img = self.hist_adjuster.adjust_histogram(self.img_path, img)
 
         return img
-
 
 class SingleTileRenderer(SingleTileDynamicRendererBase):
     '''Implementation of SingleTileRendererBase with file path for dynamic (new transformations can be applied) images'''
@@ -331,7 +330,7 @@ class SingleTileRenderer(SingleTileDynamicRendererBase):
         self.hist_adjuster = hist_adjuster
         
     def load(self):
-        img = cv2.imread(self.img_path, 0)
+        img = cv2.imread(self.img_path, cv2.IMREAD_ANYDEPTH)
         # Normalize the histogram if needed
         if self.hist_adjuster is not None:
             #img = cv2.equalizeHist(img)
@@ -358,8 +357,8 @@ class AlphaTileRenderer(SingleTileDynamicRendererBase):
                         if transform.shape[0] == 2
                         else transform) 
             for transform in 
-            other_renderer.pre_non_affine_transform, 
-            other_renderer.post_non_affine_transform]
+            [other_renderer.pre_non_affine_transform, 
+            other_renderer.post_non_affine_transform]]
         self.add_transformation(pre)             
         if other_renderer.non_affine_transform is not None:
             self.add_transformation(other_renderer.non_affine_transform)
