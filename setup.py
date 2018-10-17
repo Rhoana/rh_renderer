@@ -5,27 +5,29 @@ from setuptools.extension import Extension
 from Cython.Build import cythonize
 import subprocess
 
-VERSION = '0.0.4'
+VERSION = '0.0.5'
 
 README = open('README.md').read()
 
 flags = subprocess.check_output(['pkg-config', '--cflags-only-I', 'opencv'])
-include_dirs_list = [flag[2:] for flag in flags.split()]
+include_dirs_list = [str(flag[2:].decode('utf-8')) for flag in flags.split()]
 include_dirs_list.append('.')
+#include_dirs_list.append(np.get_include())
 flags = subprocess.check_output(['pkg-config', '--libs-only-L', 'opencv'])
 library_dirs_list = flags
 flags = subprocess.check_output(['pkg-config', '--libs', 'opencv'])
 libraries_list = []
 for flag in flags.split():
-    libraries_list.append(flag)
+    libraries_list.append(str(flag.decode('utf-8')))
 
 EXTENSIONS = [
         Extension(
-                  "rh_renderer/blender/images_composer",
-                  ["rh_renderer/blender/images_composer.pyx", "rh_renderer/blender/ImagesComposer.cpp",
-                   "rh_renderer/blender/images_composer.pyx", "rh_renderer/blender/detail/seam_finders.cpp",
-                   "rh_renderer/blender/images_composer.pyx", "rh_renderer/blender/detail/exposure_compensate.cpp",
-                   "rh_renderer/blender/images_composer.pyx", "rh_renderer/blender/detail/blenders.cpp"],
+                  "rh_renderer.blender.images_composer",
+                  [os.path.join("rh_renderer", "blender", "images_composer.pyx"),
+                   os.path.join("rh_renderer", "blender", "ImagesComposer.cpp"),
+                   os.path.join("rh_renderer", "blender", "detail", "seam_finders.cpp"),
+                   os.path.join("rh_renderer", "blender", "detail", "exposure_compensate.cpp"),
+                   os.path.join("rh_renderer", "blender", "detail", "blenders.cpp")],
                   language="c++",
                   include_dirs=include_dirs_list,
                   extra_compile_args=['-O3', '--verbose'],

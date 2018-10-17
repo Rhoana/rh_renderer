@@ -16,10 +16,11 @@ class AbstractModel(object):
         If the distance is less than epsilon, the match is considered good.
         """
         X2 = self.apply(X)
-        # dists_sqr = np.sum((y - X2) ** 2, axis=1)
-        dists = np.sqrt(np.sum((y - X2) ** 2, axis=1))
+        dists_sqr = np.sum((y - X2) ** 2, axis=1)
+        # dists = np.sqrt(np.sum((y - X2) ** 2, axis=1))
         # print "dists", dists
-        good_dists_mask = dists < epsilon
+        good_dists_mask = dists_sqr < epsilon**2
+        #good_dists_mask = dists < epsilon
         good_dists_num = np.sum(good_dists_mask)
         # good_dists = dists[dists < epsilon]
         # accepted_ratio = float(good_dists.shape[0]) / X2.shape[0]
@@ -85,10 +86,10 @@ class TranslationModel(AbstractAffineModel):
     class_name = "mpicbg.trakem2.transform.TranslationModel2D"
 
     def __init__(self, delta=np.array([0, 0])):
-        self.delta = delta
+        self.set(delta)
 
     def set(self, delta):
-        self.delta = np.array(delta)
+        self.delta = np.asarray(delta)
 
     def apply(self, p):
         if p.ndim == 1:
@@ -145,7 +146,7 @@ class RigidModel(AbstractAffineModel):
     def set(self, r, delta):
         self.cos_val = np.cos(r)
         self.sin_val = np.sin(r)
-        self.delta = np.array(delta)
+        self.delta = np.asarray(delta)
 
     def apply(self, p):
         """
@@ -165,9 +166,9 @@ class RigidModel(AbstractAffineModel):
         Returns a new 2D point(s) after applying the inverse transformation on the given point(s) p
         """
         # The inverse matrix of the [2,2] rigid matrix is similar to the forward matrix (the angle is negative),
-        # the delta needs to be computed by R-1*-delta
+        # the delta needs to be computed by R-1*delta
         inv_delta = np.dot([[self.cos_val, self.sin_val],
-                       [-self.sin_val, self.cos_val]], -self.delta).T
+                       [-self.sin_val, self.cos_val]], self.delta).T
         if p.ndim == 1:
             return np.dot([[self.cos_val, self.sin_val],
                        [-self.sin_val, self.cos_val]],
@@ -179,12 +180,12 @@ class RigidModel(AbstractAffineModel):
 
 
     def to_str(self):
-        return "R={}, T={}".format(np.arccos(self.cos_val), self.delta)
+        return "R={}, T={}".format(np.arctan2(-self.sin_val, self.cos_val), self.delta)
 
     def to_modelspec(self):
         return {
                 "className" : self.class_name,
-                "dataString" : "{} {}".format(np.arccos(self.cos_val), ' '.join([str(float(x)) for x in self.delta]))
+                "dataString" : "{} {}".format(np.arctan2(-self.sin_val, self.cos_val), ' '.join([str(float(x)) for x in self.delta]))
             }
 
     def set_from_modelspec(self, s):
