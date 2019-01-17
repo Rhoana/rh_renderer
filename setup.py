@@ -4,6 +4,7 @@ from setuptools import setup, find_packages
 from setuptools.extension import Extension
 from Cython.Build import cythonize
 import subprocess
+import numpy as np
 
 VERSION = '0.0.5'
 
@@ -12,7 +13,7 @@ README = open('README.md').read()
 flags = subprocess.check_output(['pkg-config', '--cflags-only-I', 'opencv'])
 include_dirs_list = [str(flag[2:].decode('utf-8')) for flag in flags.split()]
 include_dirs_list.append('.')
-#include_dirs_list.append(np.get_include())
+include_dirs_list.append(np.get_include())
 flags = subprocess.check_output(['pkg-config', '--libs-only-L', 'opencv'])
 library_dirs_list = flags
 flags = subprocess.check_output(['pkg-config', '--libs', 'opencv'])

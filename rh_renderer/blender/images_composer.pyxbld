@@ -10,6 +10,7 @@ flags = subprocess.check_output(['pkg-config', '--cflags-only-I', 'opencv'])
 include_dirs_list = [flag[2:] for flag in flags.split()]
 include_dirs_list.append('.')
 include_dirs_list.append(os.path.dirname(os.path.abspath(__file__)))
+include_dirs_list.append(numpy.get_include())
 flags = subprocess.check_output(['pkg-config', '--libs-only-L', 'opencv'])
 library_dirs_list = flags
 flags = subprocess.check_output(['pkg-config', '--libs', 'opencv'])
