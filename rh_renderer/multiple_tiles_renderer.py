@@ -7,7 +7,7 @@ import time
 from enum import Enum
 import pyximport
 pyximport.install()
-from images_composer import PyImagesComposer
+from rh_renderer.blender.images_composer import PyImagesComposer
 
 
 class BlendType(Enum):
