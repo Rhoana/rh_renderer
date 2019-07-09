@@ -4,6 +4,7 @@
 import cv2
 import numpy as np
 import math
+import rh_img_access_layer
 
 class SingleTileAffineRenderer:
     
@@ -42,7 +43,7 @@ class SingleTileAffineRenderer:
         if self.already_rendered:
             return self.img, np.array([self.bbox[0], self.bbox[1]])
 
-        img = cv2.imread(self.img_path, cv2.IMREAD_ANYDEPTH)
+        img = self._load(self.img_path)
         adjusted_transform = self.transform_matrix[:2].copy()
         adjusted_transform[0][2] -= self.bbox[0]
         adjusted_transform[1][2] -= self.bbox[2]
@@ -135,3 +136,5 @@ class SingleTileAffineRenderer:
 
 
 
+    def _load(self, img_path):
+        return rh_img_access_layer.read_image_file(img_path)

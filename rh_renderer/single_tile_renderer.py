@@ -11,6 +11,7 @@ import scipy.interpolate as spint
 import scipy.spatial.qhull as qhull
 from scipy.spatial import ConvexHull
 import time
+import rh_img_access_layer
 
 class SingleTileRendererBase(object):
 
@@ -305,7 +306,7 @@ class SingleTileStaticRenderer(SingleTileRendererBase):
         self.hist_adjuster = hist_adjuster
         
     def load(self):
-        img = cv2.imread(self.img_path, cv2.IMREAD_ANYDEPTH)
+        img = rh_img_access_layer.read_image_file(self.img_path)
         # Normalize the histogram if needed
         if self.hist_adjuster is not None:
             #img = cv2.equalizeHist(img)
@@ -330,7 +331,7 @@ class SingleTileRenderer(SingleTileDynamicRendererBase):
         self.hist_adjuster = hist_adjuster
         
     def load(self):
-        img = cv2.imread(self.img_path, cv2.IMREAD_ANYDEPTH)
+        img = rh_img_access_layer.read_image_file(self.img_path)
         # Normalize the histogram if needed
         if self.hist_adjuster is not None:
             #img = cv2.equalizeHist(img)
