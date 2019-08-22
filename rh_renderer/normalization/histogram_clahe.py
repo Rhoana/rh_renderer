@@ -3,7 +3,7 @@ import sys
 import cv2
 import numpy as np
 #import ujson as json
-import cPickle as pickle
+import pickle
 import skimage.exposure
 
 
