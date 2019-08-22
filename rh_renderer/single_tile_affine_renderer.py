@@ -8,24 +8,40 @@ import math
 class SingleTileAffineRenderer:
     
 
-    def __init__(self, img_path, width, height, compute_mask=False, compute_distances=True):
+    def __init__(self, img_path, width, height, 
+                 bbox=None,
+                 transformation_models=[],
+                 compute_mask=False,
+                 compute_distances=True):
         self.img_path = img_path
         self.width = width
         self.height = height
-        self.transform_matrix = np.eye(3)[:2]
         self.compute_mask = compute_mask
         self.mask = None
         self.compute_distances = compute_distances
         self.weights = None
+        if bbox is None:
+            self.bbox = [0, width - 1, 0, height - 1]
+            self.shape = (width, height)
+        else:
+            self.bbox = np.around(bbox).astype(int)
+            self.shape = (self.bbox[1] - self.bbox[0] + 1, self.bbox[3] - self.bbox[2] + 1)
+        self.transform_matrix = np.eye(3)[:2]
+        for model in transformation_models:
+            self._add_transformation(model.get_matrix()[:2])
         self.update_img_transformed_corners_and_bbox()
 
         # Save for caching
         self.already_rendered = False
 
-    def add_transformation(self, transform_matrix):
+    def _add_transformation(self, transform_matrix):
+        self.add_transformation(transform_matrix, update_corners=False)
+
+    def add_transformation(self, transform_matrix, update_corners=True):
         assert(transform_matrix.shape == (2, 3))
         self.transform_matrix = np.dot(np.vstack((transform_matrix, [0., 0., 1.])), np.vstack((self.transform_matrix, [0., 0., 1.])))[:2]
-        self.update_img_transformed_corners_and_bbox()
+        if update_corners:
+            self.update_img_transformed_corners_and_bbox()
 
         # Remove any rendering
         self.already_rendered = False
@@ -132,6 +148,7 @@ class SingleTileAffineRenderer:
         self.bbox = [int(math.floor(round(min_XY[0], 5))), int(math.ceil(round(max_XY[0], 5))), int(math.floor(round(min_XY[1], 5))), int(math.ceil(round(max_XY[1], 5)))]
         #self.bbox = [int(min_XY[0] + math.copysign(0.5, min_XY[0])), int(max_XY[0] + math.copysign(0.5, max_XY[1])), int(min_XY[1] + math.copysign(0.5, min_XY[1])), int(max_XY[1] + math.copysign(0.5, max_XY[1]))]
         self.shape = (self.bbox[1] - self.bbox[0] + 1, self.bbox[3] - self.bbox[2] + 1)
+
 
 
 

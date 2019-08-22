@@ -1,6 +1,13 @@
 from .single_tile_affine_renderer import SingleTileAffineRenderer
 import numpy as np
 import tinyr
+from enum import Enum
+
+class BlendType(Enum):
+    NO_BLENDING = 0
+    AVERAGING = 1
+    LINEAR = 2
+    MULTI_BAND_SEAM = 3
 
 
 class MultipleTilesAffineRenderer:
@@ -10,9 +17,9 @@ class MultipleTilesAffineRenderer:
             "LINEAR" : 2
         }
 
-    def __init__(self, single_tiles, blend_type="NO_BLENDING"):
+    def __init__(self, single_tiles, blend_type=BlendType.NO_BLENDING):
         """Receives a number of image paths, and for each a transformation matrix"""
-        self.blend_type = self.BLEND_TYPE[blend_type]
+        self.blend_type = blend_type
         self.single_tiles = single_tiles
         # Create an RTree of the bounding boxes of the tiles
         self.rtree = tinyr.RTree(interleaved=True, max_cap=5, min_cap=2)
@@ -49,7 +56,7 @@ class MultipleTilesAffineRenderer:
             return None, None
 
         # Distinguish between the different types of blending
-        if self.blend_type == 0: # No blending
+        if self.blend_type == BlendType.NO_BLENDING: # No blending
             res = np.zeros((int(round(to_y + 1 - from_y)), int(round(to_x + 1 - from_x))), dtype=np.uint8)
             # render only relevant parts, and stitch them together
             # filter only relevant tiles using rtree
@@ -61,7 +68,7 @@ class MultipleTilesAffineRenderer:
                     res[t_rel_point[1]:t_rel_point[1] + t_img.shape[0],
                         t_rel_point[0]:t_rel_point[0] + t_img.shape[1]] = t_img
 
-        elif self.blend_type == 1: # Averaging
+        elif self.blend_type == BlendType.AVERAGING: # Averaging
             # Do the calculation on a uint16 image (for overlapping areas), and convert to uint8 at the end
             res = np.zeros((int(round(to_y + 1 - from_y)), int(round(to_x + 1 - from_x))), dtype=np.uint16)
             res_mask = np.zeros((int(round(to_y + 1 - from_y)), int(round(to_x + 1 - from_x))), dtype=np.uint8)
@@ -83,7 +90,7 @@ class MultipleTilesAffineRenderer:
             res = res / res_mask
             res = res.astype(np.uint8)
 
-        elif self.blend_type == 2: # Linear averaging
+        elif self.blend_type == BlendType.LINEAR: # Linear averaging
             # Do the calculation on a uint32 image (for overlapping areas), and convert to uint8 at the end
             # For each pixel use the min-distance to an edge as a weight, and store the
             # average the outcome according to the weight
